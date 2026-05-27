@@ -19,10 +19,8 @@ interface PageEditorProps {
 
 const previewPaths: Record<string, string> = {
   home: '/',
-  about: '/a-propos',
-  services: '/services',
-  contact: '/contact',
-  testimonials: '/#temoignages',
+  'infos-pratiques': '/infos-pratiques',
+  faq: '/faq',
 }
 
 export function PageEditor({ pageId, title, defaultContent, children }: PageEditorProps) {

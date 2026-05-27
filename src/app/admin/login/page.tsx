@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, Lock, Mail, Shield } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { ArrowLeft, ArrowRight, Lock, Mail } from 'lucide-react'
 
 const ease = [0.22, 1, 0.36, 1] as const
+
+const inputCls =
+  'h-11 w-full rounded-md border border-foreground/15 bg-beige-light pl-10 pr-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-sauge focus:bg-white focus:outline-none focus:ring-1 focus:ring-sauge'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -50,163 +49,177 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Background image */}
+    <div className="relative min-h-screen">
+      {/* Fond plein écran : visuel de marque */}
       <div className="absolute inset-0 -z-10">
         <Image
-          src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1920&q=75"
-          alt=""
+          src="/brand/hero-cafe.png"
+          alt="Le café céramique ARTI à Rennes"
           fill
           sizes="100vw"
           priority
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/55 to-primary/30" />
-        <div className="absolute inset-0 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-navy/80 via-sauge-deep/55 to-sauge/40" />
+        {/* Vignette douce pour la lisibilité */}
+        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_40%,transparent_45%,rgba(27,46,74,0.45)_100%)]" />
       </div>
 
-      {/* Decorative ambient glow */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-32 -left-32 size-[480px] rounded-full bg-primary/20 blur-[140px]" />
-        <div className="absolute -bottom-40 -right-20 size-[420px] rounded-full bg-sky-400/15 blur-[140px]" />
-      </div>
+      {/* Halo de profondeur derrière la carte */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-beige-light/20 blur-[120px]"
+      />
 
-      <div className="flex min-h-screen flex-col">
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 py-6 sm:px-10 sm:py-8">
-          <Link
-            href="/"
-            className="font-display text-sm font-semibold tracking-wide text-white/90 transition-colors hover:text-white"
-          >
-            ← Retour au site
-          </Link>
-          <div className="hidden items-center gap-2 text-xs text-white/70 sm:flex">
-            <Shield className="size-3.5" />
-            <span>Connexion sécurisée</span>
+      {/* En-tête */}
+      <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-6 sm:px-10">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 transition-colors hover:text-white"
+        >
+          <ArrowLeft className="size-4" /> Retour au site
+        </Link>
+      </header>
+
+      {/* Carte centrée */}
+      <main className="flex min-h-screen items-center justify-center px-4 py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease }}
+          className="w-full max-w-sm"
+        >
+          <div className="mb-7 flex flex-col items-center">
+            <Image
+              src="/brand/logo-arti.png"
+              alt="ARTI"
+              width={160}
+              height={64}
+              className="h-12 w-auto object-contain brightness-0 invert"
+            />
+            <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.32em] text-white/70">
+              Café céramique · Rennes
+            </p>
           </div>
-        </header>
 
-        {/* Centered content */}
-        <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease }}
-            className="w-full max-w-md"
-          >
-            {/* Title outside card */}
-            <div className="mb-8 text-center sm:mb-10">
-              <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md">
-                <Lock className="size-5 text-white" />
+          <div className="rounded-2xl border border-white/40 bg-white/95 p-7 shadow-[var(--shadow-lg)] backdrop-blur-sm sm:p-8">
+            <p className="text-xs font-medium uppercase tracking-[0.28em] text-sauge-deep">
+              Espace admin
+            </p>
+            <h1 className="mt-2 font-display text-5xl font-medium leading-none text-foreground">
+              Connexion
+            </h1>
+            <p className="mt-2 text-sm text-foreground/60">
+              Connectez-vous pour gérer le contenu du site.
+            </p>
+
+            <form onSubmit={handleLogin} className="mt-7 space-y-4">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground/55"
+                >
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/40" />
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    placeholder="vous@exemple.fr"
+                    className={inputCls}
+                  />
+                </div>
               </div>
-              <h1 className="font-display text-3xl font-bold tracking-[-0.02em] text-white sm:text-4xl">
-                Espace admin
-              </h1>
-              <p className="mt-2 text-sm text-white/70">
-                Connectez-vous pour gérer le contenu du site
-              </p>
-            </div>
 
-            {/* Glassmorphism card */}
-            <div className="rounded-3xl border border-white/15 bg-white/[0.07] p-6 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-8">
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs font-medium uppercase tracking-wide text-white/70">
-                    Email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/50" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoComplete="email"
-                      className="h-11 rounded-xl border-white/15 bg-white/10 pl-10 text-white placeholder:text-white/40 focus:border-white/30 focus:ring-white/20"
-                    />
-                  </div>
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground/55"
+                >
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/40" />
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    className={inputCls}
+                  />
                 </div>
+              </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" className="text-xs font-medium uppercase tracking-wide text-white/70">
-                    Mot de passe
-                  </Label>
-                  <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/50" />
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                      className="h-11 rounded-xl border-white/15 bg-white/10 pl-10 text-white placeholder:text-white/40 focus:border-white/30 focus:ring-white/20"
-                    />
-                  </div>
-                </div>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600"
+                >
+                  {error}
+                </motion.div>
+              )}
 
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-100"
-                  >
-                    {error}
-                  </motion.div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="group flex h-11 w-full items-center justify-center gap-2 rounded-md bg-sauge text-sm font-medium tracking-wide text-white transition-colors hover:bg-sauge-deep disabled:opacity-50"
+              >
+                {loading ? (
+                  'Connexion en cours…'
+                ) : (
+                  <>
+                    Se connecter
+                    <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                  </>
                 )}
+              </button>
 
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="group h-11 w-full rounded-xl bg-white text-black transition-all hover:bg-white/90 hover:shadow-lg"
-                >
-                  {loading ? (
-                    'Connexion en cours...'
-                  ) : (
-                    <>
-                      Se connecter
-                      <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-                    </>
-                  )}
-                </Button>
+              <div className="relative flex items-center gap-3 py-1">
+                <span className="h-px flex-1 bg-foreground/10" />
+                <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-foreground/40">
+                  ou
+                </span>
+                <span className="h-px flex-1 bg-foreground/10" />
+              </div>
 
-                <div className="relative flex items-center gap-3 py-1">
-                  <span className="h-px flex-1 bg-white/15" />
-                  <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40">ou</span>
-                  <span className="h-px flex-1 bg-white/15" />
-                </div>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('authToken', 'demo-token')
+                  localStorage.setItem(
+                    'authUser',
+                    JSON.stringify({ email: 'demo@articafeceramique.fr', name: 'Démo', role: 'admin' })
+                  )
+                  router.push('/admin/dashboard')
+                }}
+                className="group flex h-11 w-full items-center justify-center gap-2 rounded-md border border-foreground/20 bg-white text-sm font-medium text-foreground transition-colors hover:bg-beige"
+              >
+                Accès démo
+                <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+              </button>
+            </form>
+          </div>
+        </motion.div>
+      </main>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem('authToken', 'demo-token')
-                    localStorage.setItem(
-                      'authUser',
-                      JSON.stringify({ email: 'demo@template.com', name: 'Demo', role: 'admin' })
-                    )
-                    router.push('/admin/dashboard')
-                  }}
-                  className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-sm font-medium text-white transition-all hover:border-white/25 hover:bg-white/10"
-                >
-                  Accès démo
-                  <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-                </button>
-              </form>
-            </div>
-          </motion.div>
-        </main>
-
-        {/* Footer */}
-        <footer className="px-6 py-6 text-center sm:px-10 sm:py-8">
-          <Link
-            href="/politique-de-confidentialite"
-            className="text-[11px] text-white/50 transition-colors hover:text-white/80"
-          >
-            Politique de confidentialité
-          </Link>
-        </footer>
-      </div>
+      {/* Pied de page */}
+      <footer className="absolute inset-x-0 bottom-0 px-6 py-6 text-center sm:px-10">
+        <Link
+          href="/politique-de-confidentialite"
+          className="text-[11px] text-white/60 transition-colors hover:text-white"
+        >
+          Politique de confidentialité
+        </Link>
+      </footer>
     </div>
   )
 }

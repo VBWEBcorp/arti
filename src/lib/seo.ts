@@ -54,6 +54,7 @@ export const routes = [
   '/infos-pratiques',
   '/arti-cadeaux',
   '/boutique',
+  '/produit/carte-cadeau',
   '/faq',
   '/mentions-legales',
   '/politique-de-confidentialite',

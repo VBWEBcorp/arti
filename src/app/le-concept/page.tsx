@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 
 import { ArtiButton } from '@/components/arti/arti-button'
-import { ImagePlaceholder } from '@/components/arti/image-placeholder'
+import { ConceptCarousel } from '@/components/arti/concept-carousel'
 
 export const metadata: Metadata = {
   title: 'Le concept',
@@ -46,28 +46,37 @@ export default function LeConceptPage() {
   return (
     <>
       {/* HERO */}
-      <section className="bg-beige">
+      <section className="bg-white">
         <div className="grid items-stretch gap-0 md:grid-cols-2">
-          <div className="relative bg-sauge px-6 py-14 sm:px-12 sm:py-20">
-            <div className="mx-auto max-w-[460px]">
-              <ImagePlaceholder
-                label="Étagère céramiques"
-                tone="cream"
-                aspect="portrait"
-                className="shadow-2xl"
+          {/* Colonne gauche : visuel principal + photo qui déborde en bas-gauche.
+              Mêmes dimensions que la section événements de la page d'accueil. */}
+          <div className="relative bg-sauge px-6 py-14 sm:px-12 sm:py-16 md:py-20 md:pb-48">
+            <div className="relative mx-auto max-w-[440px] pb-36 md:mx-0 md:ml-auto md:pb-0">
+              <Image
+                src="/brand/concept-etagere.png"
+                alt="Étagère de céramiques chez ARTI"
+                width={800}
+                height={800}
+                priority
+                className="h-auto w-full shadow-xl"
               />
-              <ImagePlaceholder
-                label="Devanture ARTI"
-                tone="dark"
-                aspect="square"
-                className="absolute -bottom-10 -left-2 size-36 shadow-lg sm:-left-4 sm:size-44"
-              />
+              {/* Devanture, décalée vers le bas-gauche */}
+              <div className="absolute -bottom-24 left-2 h-44 w-56 overflow-hidden shadow-lg md:-bottom-60 md:-left-56 md:h-64 md:w-80">
+                <Image
+                  src="/brand/concept-devanture.png"
+                  alt="Devanture du café ARTI à Rennes"
+                  fill
+                  sizes="(max-width: 768px) 224px, 320px"
+                  className="object-cover"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center bg-beige px-6 py-16 sm:px-12 lg:px-20">
-            <div className="max-w-md">
-              <h1 className="font-display text-5xl font-medium leading-[1.05] text-foreground sm:text-6xl">
+          {/* Colonne droite : fond blanc + texte */}
+          <div className="flex items-center bg-white px-6 py-16 sm:px-12 md:py-28 lg:pl-24 lg:pr-20">
+            <div className="max-w-[620px]">
+              <h1 className="font-display text-5xl font-medium leading-[1.12] text-foreground sm:text-[3.4rem]">
                 Arti est un coffee shop et un atelier de peinture sur céramique.
               </h1>
               <div className="mt-6 space-y-4 text-sm leading-relaxed text-foreground/85">
@@ -93,19 +102,19 @@ export default function LeConceptPage() {
       </section>
 
       {/* INTRO concept */}
-      <section className="bg-white pt-20 sm:pt-24">
-        <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
+      <section className="bg-white pt-24 sm:pt-32">
+        <div className="mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
           <Image
-            src="/brand/pot-icone.png"
+            src="/brand/vase-icone.png"
             alt="Vase ARTI"
-            width={120}
-            height={120}
-            className="h-16 w-auto object-contain"
+            width={180}
+            height={180}
+            className="h-28 w-auto object-contain sm:h-32"
           />
-          <h2 className="mt-8 font-display text-5xl font-medium leading-[1.05] text-foreground sm:text-6xl">
+          <h2 className="mt-8 font-display text-4xl font-medium leading-[1.05] text-neutral-700 sm:text-5xl lg:text-6xl">
             Vous souhaitez découvrir la peinture sur céramique ?
           </h2>
-          <p className="mt-6 max-w-xl text-sm leading-relaxed text-foreground/80">
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-neutral-600">
             Arti vous propose un moment hors du temps, 2H30 d&apos;atelier, pour
             personnaliser la pièce en céramique de votre choix. Comment cela
             fonctionne&nbsp;?
@@ -114,22 +123,22 @@ export default function LeConceptPage() {
       </section>
 
       {/* 4 ÉTAPES */}
-      <section className="bg-white pb-20 sm:pb-24">
+      <section className="bg-white pt-12 pb-20 sm:pt-16 sm:pb-24">
         <div className="mx-auto max-w-7xl px-6 sm:px-10">
-          <div className="mt-12 grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
+          <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
             {steps.map(({ n, title, icon, body }) => (
               <div key={n} className="flex flex-col items-center text-center">
                 <Image
                   src={icon}
                   alt={title}
-                  width={180}
-                  height={180}
-                  className="mb-8 h-28 w-auto object-contain sm:h-32"
+                  width={200}
+                  height={200}
+                  className="mb-8 h-32 w-auto object-contain sm:h-36"
                 />
-                <h3 className="font-sans text-lg font-semibold tracking-tight text-foreground">
+                <h3 className="font-sans text-xl font-semibold tracking-tight text-neutral-900">
                   {n}. {title}
                 </h3>
-                <p className="mt-4 text-justify text-sm leading-relaxed text-foreground/70">
+                <p className="mt-4 text-justify text-base leading-relaxed text-neutral-500">
                   {body}
                 </p>
               </div>
@@ -141,29 +150,10 @@ export default function LeConceptPage() {
       {/* COMMENT ÇA MARCHE — bloc sauge */}
       <section className="bg-sauge">
         <div className="mx-auto grid max-w-7xl items-center gap-0 md:grid-cols-2">
-          <div className="relative px-6 py-16 sm:px-12 sm:py-20">
-            <ImagePlaceholder
-              label="Atelier en cours"
-              tone="dark"
-              aspect="wide"
-              className="shadow-xl"
-            />
-            <button
-              type="button"
-              aria-label="Précédent"
-              className="absolute left-2 top-1/2 hidden -translate-y-1/2 text-3xl text-white/90 hover:text-white sm:block"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              aria-label="Suivant"
-              className="absolute right-2 top-1/2 hidden -translate-y-1/2 text-3xl text-white/90 hover:text-white sm:block"
-            >
-              ›
-            </button>
+          <div className="px-6 py-20 sm:px-12 sm:py-24">
+            <ConceptCarousel />
           </div>
-          <div className="px-6 py-16 text-white sm:px-12 sm:py-20">
+          <div className="px-6 py-20 text-white sm:px-12 sm:py-24">
             <h2 className="font-display text-5xl font-medium leading-[1.05] text-white sm:text-6xl">
               Comment ça marche&nbsp;?
             </h2>
@@ -185,7 +175,7 @@ export default function LeConceptPage() {
             </div>
             <div className="mt-7">
               <ArtiButton
-                href="https://www.pinterest.fr/articafeceramique/"
+                href="https://fr.pinterest.com/articafeceramique/inspirations/"
                 external
                 variant="outline-light"
               >
@@ -197,26 +187,38 @@ export default function LeConceptPage() {
       </section>
 
       {/* APERÇU COFFEE SHOP */}
-      <section className="bg-beige-light py-20 sm:py-24">
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 sm:px-10 md:grid-cols-[1fr_2fr]">
+      <section className="bg-white py-24 sm:py-28">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 sm:px-10 md:grid-cols-[1fr_2fr] md:gap-16">
           <div>
             <h2 className="font-display text-5xl font-medium leading-[1.05] text-foreground sm:text-6xl">
-              Un aperçu
-              <br />
-              du coffee
-              <br />
-              shop
+              Un aperçu du coffee shop
             </h2>
-            <div className="mt-7">
+            <div className="mt-8">
               <ArtiButton href="/boutique" variant="sauge">
                 Voir la carte
               </ArtiButton>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <ImagePlaceholder label="Comptoir" tone="cream" aspect="portrait" />
-            <ImagePlaceholder label="Étagères" tone="beige" aspect="portrait" />
-            <ImagePlaceholder label="Salle" tone="cream" aspect="portrait" />
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { src: '/brand/apercu-2.png', alt: 'Le comptoir du coffee shop ARTI' },
+              { src: '/brand/apercu-1.png', alt: 'Étagères de céramiques chez ARTI' },
+              { src: '/brand/apercu-3.png', alt: 'La salle du coffee shop ARTI' },
+            ].map((img) => (
+              <div
+                key={img.src}
+                className="group relative aspect-[3/4] overflow-hidden shadow-lg"
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  sizes="(max-width: 768px) 30vw, 24vw"
+                  loading="lazy"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -242,12 +244,16 @@ export default function LeConceptPage() {
                 Rennes&nbsp;!
               </p>
             </div>
-            <ImagePlaceholder
-              label="Atelier café"
-              tone="sauge"
-              aspect="wide"
-              className="shadow-lg"
-            />
+            <div className="relative aspect-[4/3] overflow-hidden shadow-lg">
+              <Image
+                src="/brand/partenaires.png"
+                alt="Nos partenaires locaux à Rennes"
+                fill
+                sizes="(max-width: 768px) 100vw, 45vw"
+                loading="lazy"
+                className="object-cover"
+              />
+            </div>
           </div>
         </div>
       </section>

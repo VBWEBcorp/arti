@@ -1,0 +1,115 @@
+import mongoose, { Schema, Document } from 'mongoose'
+
+export type GiftCardStatus = 'active' | 'used' | 'expired' | 'cancelled'
+export type GiftCardSource = 'admin' | 'online' | 'on_site' | 'avoir' | 'employee_benefit'
+export type GiftCardTxType =
+  | 'purchase'
+  | 'redemption'
+  | 'redemption_on_site'
+  | 'refund'
+  | 'cancellation'
+
+export interface IGiftCardTransaction {
+  type: GiftCardTxType
+  amount: number
+  balanceAfter: number
+  orderNumber?: string
+  description?: string
+  performedBy?: { userId?: mongoose.Types.ObjectId | string | null; name?: string | null }
+  createdAt: Date
+}
+
+export interface IGiftCard extends Document {
+  code: string
+  initialAmount: number
+  balance: number
+  currency: string
+  status: GiftCardStatus
+  purchasedBy: { userId?: mongoose.Types.ObjectId | string | null; email?: string; name?: string }
+  recipient: { name?: string; email?: string; message?: string }
+  imageUrl?: string | null
+  emailSent: boolean
+  stripePaymentIntentId?: string | null
+  stripeReceiptUrl?: string | null
+  expiresAt?: Date | null
+  transactions: IGiftCardTransaction[]
+  source: GiftCardSource
+  createdByAdmin?: mongoose.Types.ObjectId | string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+const GiftCardSchema = new Schema<IGiftCard>(
+  {
+    // Code unique de la carte (format GC-XXXX-XXXX)
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+
+    initialAmount: { type: Number, required: true, min: 0 },
+    balance: { type: Number, required: true, min: 0 },
+    currency: { type: String, default: 'EUR', uppercase: true },
+
+    status: {
+      type: String,
+      enum: ['active', 'used', 'expired', 'cancelled'],
+      default: 'active',
+    },
+
+    purchasedBy: {
+      userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+      email: String,
+      name: String,
+    },
+
+    recipient: {
+      name: String,
+      email: String,
+      message: String,
+    },
+
+    imageUrl: { type: String, default: null },
+    emailSent: { type: Boolean, default: false },
+
+    stripePaymentIntentId: { type: String, default: null },
+    stripeReceiptUrl: { type: String, default: null },
+
+    expiresAt: { type: Date, default: null },
+
+    transactions: [
+      {
+        type: {
+          type: String,
+          enum: ['purchase', 'redemption', 'redemption_on_site', 'refund', 'cancellation'],
+          required: true,
+        },
+        amount: { type: Number, required: true },
+        balanceAfter: { type: Number, required: true },
+        orderNumber: String,
+        description: String,
+        performedBy: {
+          userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+          name: { type: String, default: null },
+        },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    source: {
+      type: String,
+      enum: ['admin', 'online', 'on_site', 'avoir', 'employee_benefit'],
+      default: 'online',
+    },
+
+    createdByAdmin: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  },
+  { timestamps: true }
+)
+
+// Index
+GiftCardSchema.index({ status: 1 })
+GiftCardSchema.index({ 'purchasedBy.email': 1 })
+GiftCardSchema.index({ expiresAt: 1 }, { sparse: true })
+// Anti double-achat : un PaymentIntent ne peut créer qu'une seule carte cadeau
+GiftCardSchema.index({ stripePaymentIntentId: 1 }, { unique: true, sparse: true })
+
+export const GiftCard =
+  mongoose.models.GiftCard || mongoose.model<IGiftCard>('GiftCard', GiftCardSchema)

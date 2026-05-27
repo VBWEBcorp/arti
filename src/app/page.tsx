@@ -13,11 +13,15 @@ import {
   webPageJsonLd,
   webSiteJsonLd,
 } from '@/components/seo/json-ld'
+import { homeDefaults } from '@/lib/content-defaults'
+import { getPageContent } from '@/lib/page-content'
 import { siteConfig } from '@/lib/seo'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
 }
+
+export const dynamic = 'force-dynamic'
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -29,7 +33,9 @@ const jsonLd = {
   ],
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { hero } = await getPageContent('home', homeDefaults)
+
   return (
     <>
       <script
@@ -44,7 +50,7 @@ export default function HomePage() {
           <div className="relative z-20 flex items-center bg-sauge px-6 py-12 sm:px-10 sm:py-16 md:px-0 md:py-24">
             <div className="mx-auto w-full max-w-[600px] md:mx-0 md:ml-[16%] md:w-[82%] md:max-w-none md:translate-x-[6%]">
               <Image
-                src="/brand/hero-cafe.png"
+                src={hero.image}
                 alt="Intérieur du café ARTI à Rennes"
                 width={1000}
                 height={900}
@@ -58,28 +64,18 @@ export default function HomePage() {
           <div className="flex items-center bg-white px-6 py-16 sm:px-12 md:py-24 lg:pl-28 lg:pr-16">
             <div className="max-w-xl">
               <p className="text-xs font-medium uppercase tracking-[0.28em] text-sauge-deep">
-                Bienvenue chez Arti
+                {hero.eyebrow}
               </p>
               <h1 className="mt-5 font-display text-6xl font-medium leading-[1.05] text-foreground lg:text-7xl">
-                Le café céramique au cœur de Rennes !
+                {hero.title}
               </h1>
               <div className="mt-6 space-y-4 text-sm leading-relaxed text-foreground/85 text-justify">
-                <p>
-                  ARTI est un coffee shop cosy et inspirant qui vous propose une
-                  expérience unique de peinture sur céramique tout en dégustant
-                  un délicieux goûter. Vous pourrez décorer la pièce en
-                  céramique de votre choix, et ainsi réveiller votre âme
-                  d&apos;artiste !
-                </p>
-                <p>
-                  La peinture sur céramique est une activité ouverte à tous.
-                  Créatif ou non, débutant ou expérimenté, petit ou grand, il y
-                  a de la place pour tout le monde !
-                </p>
+                <p>{hero.paragraph1}</p>
+                <p>{hero.paragraph2}</p>
               </div>
               <div className="mt-8">
-                <ArtiButton href="/infos-pratiques#reserver" variant="sauge">
-                  Je réserve
+                <ArtiButton href={hero.buttonHref} variant="sauge">
+                  {hero.buttonLabel}
                 </ArtiButton>
               </div>
             </div>

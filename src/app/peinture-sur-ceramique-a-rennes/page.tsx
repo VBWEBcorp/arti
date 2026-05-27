@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 export default function GroupeEvenementPage() {
   return (
     <>
-      <section className="bg-beige py-20 sm:py-28">
+      <section className="bg-white py-20 sm:py-28">
         <div className="mx-auto max-w-3xl px-6 text-center sm:px-10">
-          <h1 className="font-display text-5xl font-medium leading-[1.05] text-foreground sm:text-6xl">
+          <h1 className="font-display text-5xl font-medium leading-[1.05] text-neutral-700 sm:text-6xl">
             Envie de partager un moment créatif et convivial ?
           </h1>
 

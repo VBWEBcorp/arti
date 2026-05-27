@@ -8,8 +8,6 @@ import {
   Images,
   LogOut,
   Home,
-  Users,
-  Briefcase,
   Phone,
   MessageSquare,
   PanelLeftClose,
@@ -21,6 +19,7 @@ import {
   Megaphone,
   FilePen,
   ChevronDown,
+  Gift,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSidebar } from '@/components/admin/sidebar-context'
@@ -31,15 +30,14 @@ const navItems = [
 
 const pageEditItems = [
   { href: '/admin/pages/accueil', label: 'Accueil', icon: Home },
-  { href: '/admin/pages/a-propos', label: 'À propos', icon: Users },
-  { href: '/admin/pages/services', label: 'Services', icon: Briefcase },
-  { href: '/admin/pages/contact', label: 'Contact', icon: Phone },
-  { href: '/admin/pages/temoignages', label: 'Témoignages', icon: MessageSquare },
+  { href: '/admin/pages/infos-pratiques', label: 'Infos pratiques', icon: Phone },
+  { href: '/admin/pages/faq', label: 'FAQ', icon: MessageSquare },
 ]
 
 const moduleItems = [
   { href: '/admin/gallery', label: 'Galerie', icon: Images },
   { href: '/admin/blog', label: 'Blog', icon: FileText },
+  { href: '/admin/gift-cards', label: 'Cartes cadeaux', icon: Gift },
   { href: '/admin/marketing', label: 'Marketing', icon: Megaphone },
 ]
 

@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 
+import { ArtiButton } from '@/components/arti/arti-button'
 import { FaqAccordion } from '@/components/arti/faq-accordion'
+import { faqDefaults } from '@/lib/content-defaults'
+import { getPageContent } from '@/lib/page-content'
 
 export const metadata: Metadata = {
   title: 'FAQ',
@@ -9,49 +12,43 @@ export const metadata: Metadata = {
   alternates: { canonical: '/faq' },
 }
 
-const faqItems = [
-  {
-    q: 'Les ateliers de peinture sur céramique sont-ils adaptés aux enfants ?',
-    a: "Il n'y a pas d'âge requis pour venir faire un atelier, nous sommes ouverts aux grands comme aux petits ! Cependant, nous recommandons l'atelier à partir de 5-6 ans. L'activité n'est pas compliquée mais les 2H00 d'atelier peuvent être un peu longues pour les tout-petits.",
-  },
-  {
-    q: 'Est-ce que les animaux sont acceptés ?',
-    a: 'Oui, les chiens de petites / moyennes taille et calmes sont les bienvenus au café !',
-  },
-  {
-    q: "Combien de temps dure l'activité ?",
-    a: "L'atelier de peinture sur céramique dure 2H00. Nous te recommandons d'arriver 5-10 mins avant afin de choisir ta pièce et prendre le temps de t'installer.",
-  },
-  {
-    q: 'Comment préparer ma venue chez Arti ?',
-    a: "Avant l'atelier, nous t'invitons à trouver des inspirations. Pour cela, nous avons créé une page Pinterest avec plein d'idées pour t'inspirer.",
-  },
-  {
-    q: "Quel est le prix d'un atelier ?",
-    a: "Le prix de l'atelier est déterminé par la pièce que tu choisiras le jour J. Chez Arti, les modèles vont de 15 à 50€. Les boissons et pâtisseries sont à régler à part.",
-  },
-  {
-    q: "Est-ce possible de prendre une boisson sans faire l'atelier ?",
-    a: "Bien sûr ! Deux places à côté du comptoir sont réservées aux personnes souhaitant juste prendre une boisson / goûter sans faire l'atelier.",
-  },
-  {
-    q: "Conseils d'entretien",
-    a: "Pour préserver vos céramiques sur la durée, privilégiez le lavage à la main avec une éponge douce et un savon doux. Évitez les changements brusques de température (chaud/froid) ainsi que le four à micro-ondes pour les pièces décorées. Vos céramiques peuvent être utilisées au quotidien : pour le café, le thé, les goûters ou la décoration.",
-  },
-]
+export const dynamic = 'force-dynamic'
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const faq = await getPageContent('faq', faqDefaults)
+
   return (
-    <section className="bg-beige py-20 sm:py-28">
-      <div className="mx-auto max-w-3xl px-6 sm:px-10">
+    <section className="bg-white py-20 sm:py-28">
+      <div className="mx-auto max-w-3xl px-6 text-center sm:px-10">
         <p className="text-xs font-medium uppercase tracking-[0.28em] text-sauge-deep">
-          Les questions souvent posées
+          {faq.eyebrow}
         </p>
         <h1 className="mt-3 font-display text-5xl font-medium text-foreground sm:text-6xl">
-          La FAQ
+          {faq.title}
         </h1>
-        <div className="mt-10">
-          <FaqAccordion items={faqItems} />
+        {faq.intro && (
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-foreground/75">
+            {faq.intro}
+          </p>
+        )}
+
+        <div className="mt-12 text-left">
+          <FaqAccordion items={faq.items} />
+        </div>
+
+        {/* CTA — question restante */}
+        <div className="mt-14 border-t border-foreground/10 pt-10">
+          <h2 className="font-display text-3xl font-medium text-foreground sm:text-4xl">
+            Vous ne trouvez pas votre réponse&nbsp;?
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-foreground/70">
+            Écrivez-nous, nous vous répondrons avec plaisir.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <ArtiButton href="/infos-pratiques#reserver" variant="sauge">
+              Nous contacter
+            </ArtiButton>
+          </div>
         </div>
       </div>
     </section>

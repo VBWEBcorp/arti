@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/infos-pratiques`, changeFrequency: 'monthly', priority: 0.8, lastModified: new Date() },
     { url: `${baseUrl}/arti-cadeaux`, changeFrequency: 'monthly', priority: 0.8, lastModified: new Date() },
     { url: `${baseUrl}/boutique`, changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/produit/carte-cadeau`, changeFrequency: 'monthly', priority: 0.7, lastModified: new Date() },
     { url: `${baseUrl}/faq`, changeFrequency: 'monthly', priority: 0.6, lastModified: new Date() },
   ]
   return pages
