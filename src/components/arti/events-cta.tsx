@@ -1,36 +1,42 @@
+import Image from 'next/image'
+
 import { ArtiButton } from '@/components/arti/arti-button'
-import { ImagePlaceholder } from '@/components/arti/image-placeholder'
 
 export function EventsCta() {
   return (
-    <section className="bg-beige-deep">
+    <section className="relative z-10 bg-beige-deep">
       <div className="grid gap-0 md:grid-cols-2">
-        {/* Visuel à gauche, avec petite céramique en chevauchement bas-gauche */}
-        <div className="relative bg-sauge py-16 pl-6 pr-6 sm:py-20 sm:pl-12 md:pr-0">
-          <div className="relative ml-auto max-w-[480px]">
-            <ImagePlaceholder
-              label="Atelier groupe"
-              tone="dark"
-              aspect="wide"
-              className="rounded-none shadow-xl"
+        {/* Visuel à gauche : image principale + petite tasse qui déborde en bas sur le blanc */}
+        <div className="relative bg-sauge px-6 py-14 sm:px-12 sm:py-16 md:py-20 md:pb-48">
+          <div className="relative mx-auto max-w-[440px] pb-36 md:mx-0 md:ml-auto md:pb-0">
+            <Image
+              src="/brand/creation-1.png"
+              alt="Atelier de groupe chez ARTI"
+              width={800}
+              height={640}
+              loading="lazy"
+              className="h-auto w-full shadow-xl"
             />
-            {/* Petite céramique en chevauchement bas-gauche */}
-            <ImagePlaceholder
-              label="Tasse"
-              tone="cream"
-              aspect="square"
-              className="absolute -bottom-12 -left-6 size-32 shadow-lg sm:-left-10 sm:size-40"
-            />
+            {/* Petite tasse à motif poisson, décalée vers le bas-gauche */}
+            <div className="absolute -bottom-24 left-2 h-44 w-56 overflow-hidden shadow-lg md:-bottom-60 md:-left-56 md:h-64 md:w-80">
+              <Image
+                src="/brand/event-cup.png"
+                alt="Tasse en céramique décorée chez ARTI"
+                fill
+                sizes="(max-width: 768px) 224px, 320px"
+                className="object-cover"
+              />
+            </div>
           </div>
         </div>
 
         {/* Texte à droite */}
-        <div className="flex items-center bg-beige-deep px-6 py-16 sm:px-12 sm:py-20">
-          <div className="max-w-md">
-            <h2 className="font-display text-4xl font-medium leading-[1.05] text-foreground sm:text-5xl">
+        <div className="flex items-center bg-beige-deep px-6 py-16 sm:px-12 sm:py-20 lg:px-16">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-4xl font-medium leading-[1.1] text-foreground sm:text-5xl">
               Vous souhaitez organiser un événement ?
             </h2>
-            <p className="mt-6 text-sm leading-relaxed text-foreground/80">
+            <p className="mt-6 text-justify text-sm leading-relaxed text-foreground/80">
               Que ce soit pour un anniversaire, un mariage, un enterrement de
               vie de jeune fille, ou un événement d&apos;entreprise, Arti est
               l&apos;endroit idéal pour célébrer. Nous proposons des

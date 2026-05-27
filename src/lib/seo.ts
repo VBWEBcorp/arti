@@ -11,7 +11,7 @@ export const siteConfig = {
   phone: '+33 6 33 11 30 54',
   phoneDisplay: '06 33 11 30 54',
   email: 'hello@articafeceramique.fr',
-  instagram: 'https://www.instagram.com/articafeceramique/',
+  instagram: 'https://www.instagram.com/arti.rennes/?hl=fr',
   address: {
     street: '10 rue Poullain Duparc',
     city: 'Rennes',
@@ -26,7 +26,7 @@ export const siteConfig = {
     { day: 'Jeudi', value: '14H-20H' },
     { day: 'Vendredi', value: '14H-20H' },
     { day: 'Samedi', value: '10H-19H' },
-    { day: 'Dimanche', value: '10H-18H' },
+    { day: 'Dimanche', value: '10H-17H' },
   ],
   reservationUrl: 'https://articafeceramique.fr/reserver',
 } as const

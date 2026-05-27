@@ -13,7 +13,7 @@ export function organizationJsonLd() {
       contactType: 'customer service',
       availableLanguage: 'French',
     },
-    sameAs: [] as string[],
+    sameAs: [siteConfig.instagram],
   }
 }
 

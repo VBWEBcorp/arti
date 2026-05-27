@@ -83,7 +83,7 @@ export function Navbar() {
 
         {/* Logo centré */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <Logo size="md" />
+          <Logo size="lg" />
         </div>
 
         {/* CTA Réserver à droite */}

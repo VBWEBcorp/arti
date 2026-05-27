@@ -5,8 +5,8 @@ import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Petit formulaire de contact avec captcha mathématique (style screenshot ARTI : "5 + 14 = …").
- * Démo locale — l'envoi est simulé. Brancher sur un endpoint email côté admin plus tard.
+ * Formulaire de contact / réservation avec captcha mathématique simple.
+ * Démo locale — l'envoi est simulé. À brancher sur un endpoint email côté admin.
  */
 export function ContactForm() {
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>(
@@ -34,49 +34,64 @@ export function ContactForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto max-w-2xl space-y-4 bg-beige-deep p-6 sm:p-10"
+      className="border border-foreground/10 bg-white p-6 shadow-[var(--shadow-lg)] sm:p-9"
     >
-      <h2 className="text-center font-display text-4xl font-medium text-foreground sm:text-5xl">
-        Contactez nous
+      <h2 className="font-display text-4xl font-medium text-foreground sm:text-5xl">
+        Contactez-nous
       </h2>
+      <span className="mt-3 block h-px w-12 bg-sauge/50" aria-hidden />
 
-      <Field name="nom" placeholder="Nom" required />
-      <Field name="prenom" placeholder="Prénom" required />
-      <Field name="telephone" type="tel" placeholder="Téléphone" />
-      <Field name="email" type="email" placeholder="E-mail" required />
-      <Textarea name="message" placeholder="Message" required />
+      <div className="mt-6 space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="nom" label="Nom" required />
+          <Field name="prenom" label="Prénom" required />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="telephone" type="tel" label="Téléphone" />
+          <Field name="email" type="email" label="E-mail" required />
+        </div>
+        <Textarea name="message" label="Message" required />
 
-      <div className="flex items-center justify-end gap-3 text-sm text-foreground/80">
-        <label htmlFor="captcha" className="font-medium">
-          {captcha.a} + {captcha.b} =
-        </label>
-        <input
-          id="captcha"
-          name="captcha"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          required
-          className="h-9 w-16 border border-foreground/20 bg-white px-2 text-center text-foreground focus:border-sauge focus:outline-none"
-        />
+        <div className="flex flex-wrap items-end justify-between gap-4 pt-1">
+          <div>
+            <label
+              htmlFor="captcha"
+              className="mb-1.5 block text-xs font-medium text-foreground/60"
+            >
+              Anti-spam : combien font {captcha.a} + {captcha.b} ?
+            </label>
+            <input
+              id="captcha"
+              name="captcha"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              required
+              aria-label={`${captcha.a} plus ${captcha.b}`}
+              className="h-11 w-20 border border-foreground/15 bg-beige-light px-3 text-center text-foreground focus:border-sauge focus:outline-none focus:ring-2 focus:ring-sauge/30"
+            />
+          </div>
+        </div>
+
         <button
           type="submit"
           disabled={status === 'sending'}
-          className="inline-flex h-9 items-center justify-center bg-sauge px-5 text-sm font-light tracking-wide text-white transition-colors hover:bg-sauge-deep disabled:opacity-60"
+          className="inline-flex h-12 w-full items-center justify-center bg-sauge text-sm font-medium tracking-wide text-white transition-colors hover:bg-sauge-deep disabled:opacity-60"
         >
-          {status === 'sending' ? 'Envoi…' : 'Envoi'}
+          {status === 'sending' ? 'Envoi…' : 'Envoyer le message'}
         </button>
-      </div>
 
-      {status === 'error' && (
-        <p className="text-right text-xs text-red-700">
-          Captcha incorrect. Réessayez.
-        </p>
-      )}
-      {status === 'sent' && (
-        <p className="text-right text-xs text-sauge-deep">
-          Merci, votre message a bien été envoyé !
-        </p>
-      )}
+        {status === 'error' && (
+          <p className="text-sm text-red-700">
+            Réponse anti-spam incorrecte. Réessayez.
+          </p>
+        )}
+        {status === 'sent' && (
+          <p className="text-sm font-medium text-sauge-deep">
+            Merci, votre message a bien été envoyé&nbsp;! Nous revenons vers vous
+            rapidement.
+          </p>
+        )}
+      </div>
     </form>
   )
 }
@@ -84,46 +99,63 @@ export function ContactForm() {
 function Field({
   name,
   type = 'text',
-  placeholder,
+  label,
   required,
   className,
 }: {
   name: string
   type?: string
-  placeholder: string
+  label: string
   required?: boolean
   className?: string
 }) {
   return (
-    <input
-      name={name}
-      type={type}
-      placeholder={placeholder}
-      required={required}
-      className={cn(
-        'block h-11 w-full border border-foreground/15 bg-white px-4 text-[14px] text-foreground placeholder:text-foreground/45 focus:border-sauge focus:outline-none',
-        className
-      )}
-    />
+    <div className={className}>
+      <label
+        htmlFor={name}
+        className="mb-1.5 block text-xs font-medium text-foreground/60"
+      >
+        {label}
+        {required && <span className="text-sauge-deep"> *</span>}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type={type}
+        required={required}
+        className={cn(
+          'block h-11 w-full border border-foreground/15 bg-beige-light px-4 text-[14px] text-foreground transition-colors focus:border-sauge focus:outline-none focus:ring-2 focus:ring-sauge/30'
+        )}
+      />
+    </div>
   )
 }
 
 function Textarea({
   name,
-  placeholder,
+  label,
   required,
 }: {
   name: string
-  placeholder: string
+  label: string
   required?: boolean
 }) {
   return (
-    <textarea
-      name={name}
-      placeholder={placeholder}
-      required={required}
-      rows={5}
-      className="block w-full border border-foreground/15 bg-white px-4 py-3 text-[14px] text-foreground placeholder:text-foreground/45 focus:border-sauge focus:outline-none"
-    />
+    <div>
+      <label
+        htmlFor={name}
+        className="mb-1.5 block text-xs font-medium text-foreground/60"
+      >
+        {label}
+        {required && <span className="text-sauge-deep"> *</span>}
+      </label>
+      <textarea
+        id={name}
+        name={name}
+        required={required}
+        rows={5}
+        className="block w-full border border-foreground/15 bg-beige-light px-4 py-3 text-[14px] text-foreground transition-colors focus:border-sauge focus:outline-none focus:ring-2 focus:ring-sauge/30"
+      />
+    </div>
   )
 }
