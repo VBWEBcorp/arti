@@ -182,30 +182,6 @@ export default function AdminLoginPage() {
                   </>
                 )}
               </button>
-
-              <div className="relative flex items-center gap-3 py-1">
-                <span className="h-px flex-1 bg-foreground/10" />
-                <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-foreground/40">
-                  ou
-                </span>
-                <span className="h-px flex-1 bg-foreground/10" />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  localStorage.setItem('authToken', 'demo-token')
-                  localStorage.setItem(
-                    'authUser',
-                    JSON.stringify({ email: 'demo@articafeceramique.fr', name: 'Démo', role: 'admin' })
-                  )
-                  router.push('/admin/dashboard')
-                }}
-                className="group flex h-11 w-full items-center justify-center gap-2 rounded-md border border-foreground/20 bg-white text-sm font-medium text-foreground transition-colors hover:bg-beige"
-              >
-                Accès démo
-                <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-              </button>
             </form>
           </div>
         </motion.div>

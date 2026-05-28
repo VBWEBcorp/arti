@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectDB } from '@/lib/db'
-import User from '@/models/User'
 import { generateToken } from '@/lib/auth'
+
+// Compte admin en dur : aucune base de données requise pour se connecter.
+const ADMIN_EMAIL = 'hello@articafeceramique.fr'
+const ADMIN_PASSWORD = 'arti2230'
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB()
-
     const { email, password } = await request.json()
 
-    // Validation
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
@@ -17,45 +16,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user and get password field
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password')
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+    if (
+      String(email).toLowerCase() !== ADMIN_EMAIL ||
+      String(password) !== ADMIN_PASSWORD
+    ) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // Compare password
-    const isPasswordValid = await user.comparePassword(password)
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
-    }
-
-    // Generate token
     const token = generateToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
+      userId: 'admin',
+      email: ADMIN_EMAIL,
+      role: 'admin',
     })
 
     return NextResponse.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      user: { id: 'admin', email: ADMIN_EMAIL, name: 'ARTI', role: 'admin' },
     })
   } catch (error) {
     console.error('Login error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
