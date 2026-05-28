@@ -5,6 +5,7 @@ out
 *.local
 .env
 .env.*
+!.env.example
 
 # IDE
 .vscode/*

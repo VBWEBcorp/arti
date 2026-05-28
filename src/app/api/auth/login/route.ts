@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateToken } from '@/lib/auth'
 
-// Compte admin en dur : aucune base de données requise pour se connecter.
-const ADMIN_EMAIL = 'hello@articafeceramique.fr'
-const ADMIN_PASSWORD = 'arti2230'
+// Compte admin via variables d'environnement (aucune base de données requise).
+// Définir ADMIN_EMAIL et ADMIN_PASSWORD (.env.local en local, variables Netlify en prod).
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').toLowerCase()
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
 
 export async function POST(request: NextRequest) {
   try {
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+      return NextResponse.json(
+        { error: 'Compte admin non configuré (ADMIN_EMAIL / ADMIN_PASSWORD manquants)' },
+        { status: 500 }
+      )
+    }
+
     const { email, password } = await request.json()
 
     if (!email || !password) {
