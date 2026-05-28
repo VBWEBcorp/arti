@@ -92,7 +92,7 @@ export default function LeConceptPage() {
                 </p>
               </div>
               <div className="mt-8">
-                <ArtiButton href="/boutique" variant="sauge">
+                <ArtiButton href="/carte" variant="sauge">
                   Voir la carte
                 </ArtiButton>
               </div>
@@ -194,7 +194,7 @@ export default function LeConceptPage() {
               Un aperçu du coffee shop
             </h2>
             <div className="mt-8">
-              <ArtiButton href="/boutique" variant="sauge">
+              <ArtiButton href="/carte" variant="sauge">
                 Voir la carte
               </ArtiButton>
             </div>
@@ -232,16 +232,20 @@ export default function LeConceptPage() {
           <div className="mt-12 grid items-center gap-12 md:grid-cols-2 md:gap-16">
             <div className="space-y-4 text-sm leading-relaxed text-foreground/85">
               <p>
-                Pour le café, nous avons fait le choix de travailler avec
-                café&nbsp;1802. Fred et Renaud sont Barista et Torréfacteur et
-                ont à cœur de proposer des cafés de spécialité issus du commerce
-                équitable. Ils élaborent des recettes uniques et torréfient leur
-                café en Bretagne, à Saint-Thuriau.
+                Pour le café, nous travaillons avec Café&nbsp;1802. Fred et
+                Renaud, barista et torréfacteur, sélectionnent des cafés de
+                spécialité issus du commerce équitable et les torréfient en
+                Bretagne, à Saint-Thuriau. Des recettes uniques, à découvrir
+                tasse après tasse.
               </p>
               <p>
-                Nous travaillons avec Bonœuf pour nos pâtisseries : des cookies
-                généreux et gourmands, 100% végétal et fabriqué juste à côté de
-                Rennes&nbsp;!
+                Côté gourmandise, nos pâtisseries viennent de Bonœuf&nbsp;: des
+                cookies généreux, 100&nbsp;% végétaux, fabriqués juste à côté de
+                Rennes.
+              </p>
+              <p>
+                Travailler avec des producteurs locaux, c'est notre façon de
+                vous offrir le meilleur tout en soutenant le savoir-faire d'ici.
               </p>
             </div>
             <div className="relative aspect-[4/3] overflow-hidden shadow-lg">

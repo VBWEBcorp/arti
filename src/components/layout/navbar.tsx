@@ -15,14 +15,15 @@ interface NavLink {
   label: string
 }
 
-// Ordre exact du burger menu ARTI (cf. screenshot fourni par la cliente)
+// Ordre du burger menu ARTI : parcours visiteur (concept → carte → céramiques → kit → reste)
 const links: NavLink[] = [
   { to: '/le-concept', label: 'Le concept' },
+  { to: '/carte', label: 'La carte' },
   { to: '/arti-ceramiques', label: 'Les céramiques' },
+  { to: '/kit-a-emporter', label: 'Kit à emporter' },
   { to: '/peinture-sur-ceramique-a-rennes', label: 'Groupe & Evènement' },
   { to: '/infos-pratiques', label: 'Infos pratiques' },
   { to: '/arti-cadeaux', label: 'Cartes cadeaux' },
-  { to: '/boutique', label: 'Boutique' },
   { to: '/faq', label: 'FAQ' },
 ]
 

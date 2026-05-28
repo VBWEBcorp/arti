@@ -57,7 +57,7 @@ export default function ArtiCadeauxPage() {
               </p>
             </div>
             <div className="mt-8">
-              <ArtiButton href="/boutique" variant="sauge">
+              <ArtiButton href="/produit/carte-cadeau" variant="sauge">
                 Choisir un bon cadeau
               </ArtiButton>
             </div>

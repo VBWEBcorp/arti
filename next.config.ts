@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
+  async redirects() {
+    return [
+      { source: '/boutique', destination: '/arti-cadeaux', permanent: true },
+    ]
+  },
 }
 
 export default nextConfig

@@ -7,10 +7,12 @@ import { siteConfig } from '@/lib/seo'
 const navLinks = [
   { label: 'Accueil', to: '/' },
   { label: 'Le concept', to: '/le-concept' },
+  { label: 'La carte', to: '/carte' },
   { label: 'Les céramiques', to: '/arti-ceramiques' },
+  { label: 'Kit à emporter', to: '/kit-a-emporter' },
   { label: 'Infos pratiques', to: '/infos-pratiques' },
+  { label: 'Cartes cadeaux', to: '/arti-cadeaux' },
   { label: 'Réserver', to: '/infos-pratiques#reserver' },
-  { label: 'Cadeaux', to: '/arti-cadeaux' },
 ]
 
 const eyebrow =

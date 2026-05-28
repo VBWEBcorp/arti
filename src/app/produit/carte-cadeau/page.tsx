@@ -23,8 +23,8 @@ export default function CarteCadeauPage() {
             Accueil
           </Link>
           <span className="mx-2">/</span>
-          <Link href="/boutique" className="hover:text-foreground">
-            Boutique
+          <Link href="/arti-cadeaux" className="hover:text-foreground">
+            Cartes cadeaux
           </Link>
           <span className="mx-2">/</span>
           <span className="text-foreground/80">Carte Cadeau</span>
