@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         code: giftCard.code,
         amount: giftCard.initialAmount,
         recipient: giftCard.recipient,
-        testMode: !isStripeConfigured(),
+        testMode: !(await isStripeConfigured()),
       },
       { status: 201 }
     )

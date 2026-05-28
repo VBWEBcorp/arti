@@ -1,20 +1,45 @@
 /**
- * Couche Stripe pour les cartes cadeaux.
+ * Couche Stripe.
  *
- * Mode "préparé mais non branché" : tant que STRIPE_SECRET_KEY n'est pas défini,
- * on tourne en MODE TEST — le flux d'achat fonctionne de bout en bout sans
- * paiement réel (utile pour développer / démontrer). Dès que les clés Stripe
- * sont fournies, la vérification réelle du PaymentIntent s'active automatiquement.
- *
- * Pour brancher Stripe pour de vrai plus tard :
- *   1. npm install stripe @stripe/stripe-js @stripe/react-stripe-js
- *   2. Définir STRIPE_SECRET_KEY (et NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY côté front)
- *   3. Créer une route POST /api/gift-cards/payment-intent qui crée le PaymentIntent
- *      (cf. README du module, section "Stripe — création du PaymentIntent").
+ * Les clés sont lues via getApiKeys() depuis l'environnement (.env.local en
+ * local, variables Netlify en prod) — privé, jamais exposé côté admin. Tant
+ * qu'aucune clé secrète n'est définie, on tourne en MODE TEST : le flux d'achat
+ * des cartes cadeaux fonctionne de bout en bout sans paiement réel. Dès qu'une
+ * clé est fournie, la vérification réelle du PaymentIntent s'active.
  */
 
-export function isStripeConfigured(): boolean {
-  return !!process.env.STRIPE_SECRET_KEY
+import Stripe from 'stripe'
+import { getApiKeys } from './apikeys'
+
+let stripeInstance: Stripe | null = null
+let lastKey = ''
+
+/** Instance Stripe basée sur la clé secrète courante. Lève si non configurée. */
+export async function getStripe(): Promise<Stripe> {
+  const keys = getApiKeys()
+
+  if (!keys.stripeSecretKey) {
+    throw new Error(
+      'Clé Stripe non configurée. Allez dans Admin → Paramètres → Clés API.'
+    )
+  }
+
+  if (!stripeInstance || lastKey !== keys.stripeSecretKey) {
+    stripeInstance = new Stripe(keys.stripeSecretKey, { typescript: true })
+    lastKey = keys.stripeSecretKey
+  }
+
+  return stripeInstance
+}
+
+/** Clé publique (publishable) — exposable côté front. */
+export async function getStripePublishableKey(): Promise<string> {
+  return getApiKeys().stripePublishableKey
+}
+
+/** Vrai si une clé secrète Stripe est configurée (via l'environnement). */
+export async function isStripeConfigured(): Promise<boolean> {
+  return !!getApiKeys().stripeSecretKey
 }
 
 export type PaymentVerification = {
@@ -32,7 +57,9 @@ export async function verifyGiftCardPayment(
   paymentIntentId: string,
   amountEuros: number
 ): Promise<PaymentVerification> {
-  if (!isStripeConfigured()) {
+  const configured = await isStripeConfigured()
+
+  if (!configured) {
     const ok = typeof paymentIntentId === 'string' && paymentIntentId.startsWith('pi_')
     return {
       ok,
@@ -42,12 +69,7 @@ export async function verifyGiftCardPayment(
     }
   }
 
-  // Import dynamique via spécificateur calculé : ni TypeScript ni le bundler ne
-  // tentent de résoudre `stripe` tant que le package n'est pas installé. Une fois
-  // `npm install stripe` fait, ce chemin s'active dès que STRIPE_SECRET_KEY existe.
-  const moduleName = 'stripe'
-  const Stripe = (await import(/* webpackIgnore: true */ moduleName)).default
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+  const stripe = await getStripe()
   const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
     expand: ['latest_charge'],
   })

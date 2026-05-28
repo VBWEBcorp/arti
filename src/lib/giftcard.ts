@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { connectDB } from '@/lib/db'
 import { GiftCard, type IGiftCard, type GiftCardSource } from '@/models/GiftCard'
 import { verifyGiftCardPayment } from '@/lib/stripe'
+import { sendEmail } from '@/lib/resend'
 
 /** Erreur métier avec code HTTP (mappée par les API routes). */
 export class GiftCardError extends Error {
@@ -260,14 +261,65 @@ export async function purchaseGiftCard(
   })
 }
 
-/** Envoi des emails — STUB. Remplacer par un vrai service (Resend, Nodemailer, etc.). */
+function eur(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
+}
+
+function giftCardEmailHtml(opts: { title: string; intro: string; giftCard: IGiftCard }): string {
+  const { title, intro, giftCard } = opts
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f6f5f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;">
+    <div style="padding:32px 28px 16px;text-align:center;border-bottom:1px solid #f0eee9;">
+      <h1 style="margin:0;font-size:20px;color:#1f2421;">ARTI</h1>
+    </div>
+    <div style="padding:28px;color:#3a3f3b;font-size:15px;line-height:1.7;">
+      <h2 style="margin:0 0 14px;font-size:22px;color:#1f2421;">${title}</h2>
+      <p style="margin:0 0 18px;">${intro}</p>
+      <div style="border:1px solid #e6e3dc;border-radius:12px;padding:20px;text-align:center;background:#faf9f6;">
+        <p style="margin:0 0 6px;font-size:13px;color:#8a8f88;text-transform:uppercase;letter-spacing:.08em;">Code de la carte</p>
+        <p style="margin:0 0 14px;font-size:24px;font-weight:700;letter-spacing:.1em;color:#1f2421;font-family:monospace;">${giftCard.code}</p>
+        <p style="margin:0;font-size:15px;color:#3a3f3b;">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
+      </div>
+      ${giftCard.recipient?.message ? `<p style="margin:18px 0 0;font-style:italic;color:#5a5f5b;">« ${giftCard.recipient.message} »</p>` : ''}
+    </div>
+    <div style="padding:22px 28px;text-align:center;border-top:1px solid #f0eee9;color:#a7aaa4;font-size:12px;">
+      <p style="margin:0;">&copy; ${new Date().getFullYear()} ARTI. Tous droits réservés.</p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+/** Envoi des emails de carte cadeau (acheteur + destinataire) via Resend. */
 async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
   if (giftCard.purchasedBy?.email) {
-    console.log(`[giftcard][email] confirmation achat → ${giftCard.purchasedBy.email} (code ${giftCard.code})`)
+    await sendEmail({
+      to: giftCard.purchasedBy.email,
+      subject: `Votre carte cadeau ARTI — ${eur(giftCard.initialAmount)}`,
+      html: giftCardEmailHtml({
+        title: 'Merci pour votre achat',
+        intro: `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous.`,
+        giftCard,
+      }),
+    })
   }
+
   if (giftCard.recipient?.email) {
-    console.log(`[giftcard][email] notification destinataire → ${giftCard.recipient.email} (code ${giftCard.code})`)
+    await sendEmail({
+      to: giftCard.recipient.email,
+      subject: `${giftCard.purchasedBy?.name || 'Quelqu\'un'} vous offre une carte cadeau ARTI`,
+      html: giftCardEmailHtml({
+        title: 'Vous avez reçu une carte cadeau !',
+        intro: `${giftCard.purchasedBy?.name || 'Une personne'} vous offre une carte cadeau ARTI d'un montant de ${eur(giftCard.initialAmount)}.`,
+        giftCard,
+      }),
+      replyTo: giftCard.purchasedBy?.email || undefined,
+    })
   }
+
   giftCard.emailSent = true
   await giftCard.save()
 }
