@@ -1,9 +1,15 @@
 import crypto from 'crypto'
+import mongoose from 'mongoose'
 
 import { connectDB } from '@/lib/db'
-import { GiftCard, type IGiftCard, type GiftCardSource } from '@/models/GiftCard'
+import { GiftCard, GiftCardSettings, type IGiftCard, type GiftCardSource } from '@/models/GiftCard'
 import { verifyGiftCardPayment } from '@/lib/stripe'
 import { sendEmail } from '@/lib/resend'
+import {
+  type GiftCardDesign,
+  GIFT_CARD_DESIGN_DEFAULT,
+  normalizeGiftCardDesign,
+} from '@/lib/gift-card-design'
 
 /** Erreur métier avec code HTTP (mappée par les API routes). */
 export class GiftCardError extends Error {
@@ -20,8 +26,60 @@ export const GIFT_CARD_PRESETS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as co
 export const MIN_AMOUNT = 5
 export const MAX_AMOUNT = 500
 
+/** Lit l'apparence (fond + réglages) de la carte cadeau. Renvoie le défaut si rien n'est défini. */
+export async function getGiftCardDesign(): Promise<GiftCardDesign> {
+  await connectDB()
+  const s = await GiftCardSettings.findOne().lean<{
+    backgroundUrl?: string | null
+    textColor?: 'light' | 'dark'
+    scrim?: number
+    heading?: string
+  }>()
+  if (!s) return { ...GIFT_CARD_DESIGN_DEFAULT }
+  return normalizeGiftCardDesign(s)
+}
+
+/**
+ * Met à jour l'apparence (admin).
+ * Champ `undefined` = inchangé ; pour `backgroundUrl`, `null` = retour au fond
+ * par défaut. On part de l'existant et on n'applique que les champs fournis.
+ */
+export async function updateGiftCardDesign(patch: Partial<GiftCardDesign>): Promise<GiftCardDesign> {
+  await connectDB()
+  const current = await GiftCardSettings.findOne()
+  const base = current ? normalizeGiftCardDesign(current.toObject()) : { ...GIFT_CARD_DESIGN_DEFAULT }
+
+  const merged: GiftCardDesign = { ...base }
+  if (patch.backgroundUrl !== undefined) merged.backgroundUrl = patch.backgroundUrl
+  if (patch.textColor !== undefined) merged.textColor = patch.textColor
+  if (patch.scrim !== undefined) merged.scrim = patch.scrim
+  if (patch.heading !== undefined) merged.heading = patch.heading
+  const next = normalizeGiftCardDesign(merged)
+
+  if (!current) {
+    await GiftCardSettings.create(next)
+  } else {
+    current.backgroundUrl = next.backgroundUrl
+    current.textColor = next.textColor
+    current.scrim = next.scrim
+    current.heading = next.heading
+    await current.save()
+  }
+  return next
+}
+
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Renvoie l'id s'il est un ObjectId valide, sinon `null`.
+ * L'admin connecté via variables d'environnement a un userId non-ObjectId
+ * (ex. "admin") : on ne peut donc pas le stocker dans un champ ObjectId. Le nom
+ * lisible (email) est conservé à part dans `name`.
+ */
+function objectIdOrNull(id: string | null | undefined): string | null {
+  return id && mongoose.isValidObjectId(id) ? id : null
 }
 
 /** Génère un code (format GC-XXXX-XXXX), sans I/O/0/1 pour la lisibilité. */
@@ -62,6 +120,8 @@ type CreateData = {
   stripeReceiptUrl?: string | null
   expiresAt?: Date | null
   adminName?: string | null
+  /** Fond propre à cette carte (override de l'image globale). */
+  imageUrl?: string | null
 }
 
 export async function createGiftCard(data: CreateData, adminId: string | null = null): Promise<IGiftCard> {
@@ -77,18 +137,19 @@ export async function createGiftCard(data: CreateData, adminId: string | null = 
     status: 'active',
     purchasedBy: data.purchasedBy || {},
     recipient: data.recipient || {},
+    imageUrl: data.imageUrl || null,
     stripePaymentIntentId: data.stripePaymentIntentId || null,
     stripeReceiptUrl: data.stripeReceiptUrl || null,
     expiresAt: data.expiresAt || null,
     source,
-    createdByAdmin: adminId || null,
+    createdByAdmin: objectIdOrNull(adminId),
     transactions: [
       {
         type: 'purchase',
         amount: data.initialAmount,
         balanceAfter: data.initialAmount,
         description: sourceDescription(source),
-        performedBy: adminId ? { userId: adminId, name: data.adminName || null } : undefined,
+        performedBy: adminId ? { userId: objectIdOrNull(adminId), name: data.adminName || null } : undefined,
       },
     ],
   })
@@ -194,7 +255,7 @@ export async function redeemOnSite(
     amount: roundedAmount,
     balanceAfter: giftCard.balance,
     description: description || 'Utilisation sur place',
-    performedBy: { userId: staffUser.id, name: staffUser.name },
+    performedBy: { userId: objectIdOrNull(staffUser.id), name: staffUser.name },
     createdAt: new Date(),
   })
 
@@ -220,7 +281,7 @@ export async function cancelGiftCard(
     amount: giftCard.balance,
     balanceAfter: 0,
     description: 'Annulation par admin',
-    performedBy: adminUser ? { userId: adminUser.id, name: adminUser.name } : undefined,
+    performedBy: adminUser ? { userId: objectIdOrNull(adminUser.id), name: adminUser.name } : undefined,
     createdAt: new Date(),
   })
   giftCard.balance = 0
@@ -278,8 +339,31 @@ function eur(amount: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
 }
 
-function giftCardEmailHtml(opts: { title: string; intro: string; giftCard: IGiftCard }): string {
-  const { title, intro, giftCard } = opts
+function giftCardEmailHtml(opts: {
+  title: string
+  intro: string
+  giftCard: IGiftCard
+  design: GiftCardDesign
+}): string {
+  const { title, intro, giftCard, design } = opts
+
+  // Le fond personnalisé est repris dans la "carte" de l'email. Outlook desktop
+  // ignore background-image et retombe sur la couleur de fond (dégradé propre).
+  const hasBg = !!design.backgroundUrl
+  const dark = design.textColor === 'dark'
+  const ink = dark ? '#1f2421' : '#ffffff'
+  const inkMuted = dark ? '#5a5f5b' : 'rgba(255,255,255,0.85)'
+  const overlay = dark
+    ? `rgba(255,255,255,${design.scrim / 100})`
+    : `rgba(0,0,0,${design.scrim / 100})`
+
+  const boxStyle = hasBg
+    ? `border-radius:12px;padding:26px 20px;text-align:center;background-color:#7d8a6f;background-image:linear-gradient(${overlay},${overlay}),url('${design.backgroundUrl}');background-size:cover;background-position:center;`
+    : `border:1px solid #e6e3dc;border-radius:12px;padding:20px;text-align:center;background:#faf9f6;`
+  const labelColor = hasBg ? inkMuted : '#8a8f88'
+  const codeColor = hasBg ? ink : '#1f2421'
+  const amountColor = hasBg ? ink : '#3a3f3b'
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -291,12 +375,12 @@ function giftCardEmailHtml(opts: { title: string; intro: string; giftCard: IGift
     <div style="padding:28px;color:#3a3f3b;font-size:15px;line-height:1.7;">
       <h2 style="margin:0 0 14px;font-size:22px;color:#1f2421;">${title}</h2>
       <p style="margin:0 0 18px;">${intro}</p>
-      <div style="border:1px solid #e6e3dc;border-radius:12px;padding:20px;text-align:center;background:#faf9f6;">
-        <p style="margin:0 0 6px;font-size:13px;color:#8a8f88;text-transform:uppercase;letter-spacing:.08em;">Code de la carte</p>
-        <p style="margin:0 0 14px;font-size:24px;font-weight:700;letter-spacing:.1em;color:#1f2421;font-family:monospace;">${giftCard.code}</p>
-        <p style="margin:0;font-size:15px;color:#3a3f3b;">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
+      <div style="${boxStyle}">
+        <p style="margin:0 0 6px;font-size:13px;color:${labelColor};text-transform:uppercase;letter-spacing:.08em;">${escapeHtml(design.heading)}</p>
+        <p style="margin:0 0 14px;font-size:24px;font-weight:700;letter-spacing:.1em;color:${codeColor};font-family:monospace;">${giftCard.code}</p>
+        <p style="margin:0;font-size:15px;color:${amountColor};">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
       </div>
-      ${giftCard.recipient?.message ? `<p style="margin:18px 0 0;font-style:italic;color:#5a5f5b;">« ${giftCard.recipient.message} »</p>` : ''}
+      ${giftCard.recipient?.message ? `<p style="margin:18px 0 0;font-style:italic;color:#5a5f5b;">« ${escapeHtml(giftCard.recipient.message)} »</p>` : ''}
     </div>
     <div style="padding:22px 28px;text-align:center;border-top:1px solid #f0eee9;color:#a7aaa4;font-size:12px;">
       <p style="margin:0;">&copy; ${new Date().getFullYear()} ARTI. Tous droits réservés.</p>
@@ -306,8 +390,26 @@ function giftCardEmailHtml(opts: { title: string; intro: string; giftCard: IGift
 </html>`
 }
 
+/** Échappe le HTML pour éviter toute injection dans les emails (message, titre…). */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 /** Envoi des emails de carte cadeau (acheteur + destinataire) via Resend. */
 async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
+  // L'apparence personnalisée est reprise dans l'email reçu. Si la carte a son
+  // propre fond (override admin), il prime sur le fond global ; le reste du
+  // style (couleur, voile, titre) est hérité du modèle global.
+  const globalDesign = await getGiftCardDesign()
+  const design: GiftCardDesign = giftCard.imageUrl
+    ? { ...globalDesign, backgroundUrl: giftCard.imageUrl }
+    : globalDesign
+
   if (giftCard.purchasedBy?.email) {
     await sendEmail({
       to: giftCard.purchasedBy.email,
@@ -316,6 +418,7 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
         title: 'Merci pour votre achat',
         intro: `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous.`,
         giftCard,
+        design,
       }),
     })
   }
@@ -328,6 +431,7 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
         title: 'Vous avez reçu une carte cadeau !',
         intro: `${giftCard.purchasedBy?.name || 'Une personne'} vous offre une carte cadeau ARTI d'un montant de ${eur(giftCard.initialAmount)}.`,
         giftCard,
+        design,
       }),
       replyTo: giftCard.purchasedBy?.email || undefined,
     })

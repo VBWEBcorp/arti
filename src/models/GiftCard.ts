@@ -108,8 +108,42 @@ const GiftCardSchema = new Schema<IGiftCard>(
 GiftCardSchema.index({ status: 1 })
 GiftCardSchema.index({ 'purchasedBy.email': 1 })
 GiftCardSchema.index({ expiresAt: 1 }, { sparse: true })
-// Anti double-achat : un PaymentIntent ne peut créer qu'une seule carte cadeau
-GiftCardSchema.index({ stripePaymentIntentId: 1 }, { unique: true, sparse: true })
+// Anti double-achat : un PaymentIntent ne crée qu'une seule carte cadeau.
+// Index PARTIEL (et non `sparse`) : seules les valeurs string sont indexées.
+// Un index sparse indexerait quand même les `null` explicites, ce qui ferait
+// échouer la création de la 2e carte sans paiement (admin, avoir, sur place…)
+// avec une collision « dup key: null ». Le filtre $type:'string' permet une
+// infinité de cartes sans paiement tout en gardant l'unicité des vrais id.
+GiftCardSchema.index(
+  { stripePaymentIntentId: 1 },
+  { unique: true, partialFilterExpression: { stripePaymentIntentId: { $type: 'string' } } }
+)
 
 export const GiftCard =
   mongoose.models.GiftCard || mongoose.model<IGiftCard>('GiftCard', GiftCardSchema)
+
+// ============================================================================
+//  Apparence de la carte cadeau — réglages globaux (un seul document)
+// ============================================================================
+
+export interface IGiftCardSettings extends Document {
+  backgroundUrl: string | null
+  textColor: 'light' | 'dark'
+  scrim: number
+  heading: string
+  updatedAt: Date
+}
+
+const GiftCardSettingsSchema = new Schema<IGiftCardSettings>(
+  {
+    backgroundUrl: { type: String, default: null },
+    textColor: { type: String, enum: ['light', 'dark'], default: 'light' },
+    scrim: { type: Number, default: 0, min: 0, max: 80 },
+    heading: { type: String, default: 'Carte cadeau' },
+  },
+  { timestamps: true }
+)
+
+export const GiftCardSettings =
+  mongoose.models.GiftCardSettings ||
+  mongoose.model<IGiftCardSettings>('GiftCardSettings', GiftCardSettingsSchema)

@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         source,
         purchasedBy: body.purchasedBy || {},
         recipient: body.recipient || {},
+        imageUrl: typeof body.imageUrl === 'string' && body.imageUrl ? body.imageUrl : null,
         expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
         adminName: user.email,
       },
