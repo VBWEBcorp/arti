@@ -361,6 +361,12 @@ export function GiftCardPurchase() {
               <StripePaymentForm
                 amount={effectiveAmount}
                 publishableKey={config.stripePublishableKey}
+                purchaser={{ name: purchaser.name.trim(), email: purchaser.email.trim() }}
+                recipient={{
+                  name: recipient.name.trim(),
+                  email: recipient.email.trim(),
+                  message: recipient.message.trim(),
+                }}
                 onSuccess={finalizePurchase}
                 onError={(m) => setErrors(m ? [m] : [])}
               />

@@ -93,7 +93,8 @@ export async function createGiftCard(data: CreateData, adminId: string | null = 
     ],
   })
 
-  // Emails (acheteur + destinataire) — stub : à brancher sur un vrai service mail.
+  // Emails (acheteur + destinataire) via Resend. Échec non bloquant : une carte
+  // créée ne doit jamais être perdue parce qu'un email n'est pas parti.
   try {
     await sendGiftCardEmails(giftCard)
   } catch (err) {
@@ -242,23 +243,35 @@ export async function purchaseGiftCard(
 ): Promise<IGiftCard> {
   await connectDB()
 
-  // Anti-doublon : un PaymentIntent ne crée qu'une seule carte.
+  // Idempotence : un PaymentIntent ne crée qu'une seule carte. Si elle existe
+  // déjà (re-soumission, retry réseau, ou plus tard un webhook qui aurait
+  // devancé le client), on renvoie la carte existante au lieu d'échouer.
   const existing = await GiftCard.findOne({ stripePaymentIntentId })
-  if (existing) throw new GiftCardError('Ce paiement a déjà été utilisé pour une carte cadeau')
+  if (existing) return existing
 
   const verification = await verifyGiftCardPayment(stripePaymentIntentId, data.amount)
   if (!verification.ok) {
     throw new GiftCardError(verification.reason || "Le paiement n'a pas pu être vérifié", 402)
   }
 
-  return createGiftCard({
-    initialAmount: data.amount,
-    source: 'online',
-    purchasedBy: data.purchaser || {},
-    recipient: data.recipient || {},
-    stripePaymentIntentId,
-    stripeReceiptUrl: verification.receiptUrl,
-  })
+  try {
+    return await createGiftCard({
+      initialAmount: data.amount,
+      source: 'online',
+      purchasedBy: data.purchaser || {},
+      recipient: data.recipient || {},
+      stripePaymentIntentId,
+      stripeReceiptUrl: verification.receiptUrl,
+    })
+  } catch (err) {
+    // Course entre deux requêtes concurrentes : l'index unique a bloqué la
+    // seconde insertion (E11000). On renvoie alors la carte gagnante.
+    if ((err as { code?: number }).code === 11000) {
+      const winner = await GiftCard.findOne({ stripePaymentIntentId })
+      if (winner) return winner
+    }
+    throw err
+  }
 }
 
 function eur(amount: number): string {

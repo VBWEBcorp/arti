@@ -25,21 +25,36 @@ function getStripePromise(publishableKey: string) {
   return stripePromise
 }
 
+type Purchaser = { name: string; email: string }
+type Recipient = { name: string; email: string; message: string }
+
 type Props = {
   amount: number
   publishableKey: string
+  purchaser: Purchaser
+  recipient: Recipient
   onSuccess: (paymentIntentId: string) => void
   onError: (message: string) => void
 }
 
-export function StripePaymentForm({ amount, publishableKey, onSuccess, onError }: Props) {
+export function StripePaymentForm({
+  amount,
+  publishableKey,
+  purchaser,
+  recipient,
+  onSuccess,
+  onError,
+}: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Ref pour ne pas relancer l'effet (et recréer un PaymentIntent) quand le
-  // parent recrée la fonction onError à chaque render.
+  // Refs pour ne pas relancer l'effet (et recréer un PaymentIntent) quand le
+  // parent recrée onError / les objets à chaque render. Les coordonnées sont
+  // fixées à l'étape 1, donc seul `amount` doit piloter la création du paiement.
   const onErrorRef = useRef(onError)
   onErrorRef.current = onError
+  const detailsRef = useRef({ purchaser, recipient })
+  detailsRef.current = { purchaser, recipient }
 
   useEffect(() => {
     let cancelled = false
@@ -49,7 +64,11 @@ export function StripePaymentForm({ amount, publishableKey, onSuccess, onError }
     fetch('/api/gift-cards/payment-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount }),
+      body: JSON.stringify({
+        amount,
+        purchaser: detailsRef.current.purchaser,
+        recipient: detailsRef.current.recipient,
+      }),
     })
       .then((r) => r.json())
       .then((data) => {
@@ -100,7 +119,13 @@ export function StripePaymentForm({ amount, publishableKey, onSuccess, onError }
   )
 }
 
-function PaymentInner({ amount, onSuccess, onError }: Omit<Props, 'publishableKey'>) {
+type PaymentInnerProps = {
+  amount: number
+  onSuccess: (paymentIntentId: string) => void
+  onError: (message: string) => void
+}
+
+function PaymentInner({ amount, onSuccess, onError }: PaymentInnerProps) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
