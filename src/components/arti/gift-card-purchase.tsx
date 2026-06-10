@@ -14,13 +14,20 @@ import {
 import { useEffect, useState } from 'react'
 
 import { GiftCardVisual } from '@/components/arti/gift-card-visual'
+import { StripePaymentForm } from '@/components/arti/stripe-payment-form'
 import { cn } from '@/lib/utils'
 
 const eur = (n: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-type Config = { presets: number[]; min: number; max: number; stripeConfigured: boolean }
+type Config = {
+  presets: number[]
+  min: number
+  max: number
+  stripeConfigured: boolean
+  stripePublishableKey: string
+}
 type PurchaseResult = {
   id: string
   code: string
@@ -34,6 +41,7 @@ const FALLBACK: Config = {
   min: 10,
   max: 100,
   stripeConfigured: false,
+  stripePublishableKey: '',
 }
 
 export function GiftCardPurchase() {
@@ -92,15 +100,13 @@ export function GiftCardPurchase() {
     setStep(2)
   }
 
-  const handlePay = async () => {
+  // Finalise l'achat : crée la carte côté serveur à partir d'un PaymentIntent.
+  // En mode réel, l'id vient de Stripe Elements ; en mode test, c'est un id simulé.
+  const finalizePurchase = async (stripePaymentIntentId: string) => {
     if (processing) return
     setProcessing(true)
     setErrors([])
     try {
-      // MODE TEST (Stripe non branché) : on simule un PaymentIntent confirmé.
-      // Quand Stripe sera branché, ce id viendra de Stripe Elements après paiement.
-      const stripePaymentIntentId = `pi_test_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-
       const res = await fetch('/api/gift-cards/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,6 +130,12 @@ export function GiftCardPurchase() {
     } finally {
       setProcessing(false)
     }
+  }
+
+  // Mode test (Stripe non branché) : on simule un PaymentIntent confirmé.
+  const handleTestPay = () => {
+    const id = `pi_test_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    finalizePurchase(id)
   }
 
   const copyCode = () => {
@@ -343,54 +355,81 @@ export function GiftCardPurchase() {
             )}
           </div>
 
-          {!config.stripeConfigured ? (
-            <div className="border border-terracotta/40 bg-terracotta/10 p-4 text-center">
-              <p className="text-sm font-medium text-terracotta">Mode test — paiement simulé</p>
-              <p className="mt-1 text-xs text-foreground/70">
-                Stripe n&apos;est pas encore branché. La validation crée une vraie carte en base
-                sans transaction bancaire.
-              </p>
-            </div>
+          {config.stripeConfigured && config.stripePublishableKey ? (
+            // ===== Paiement réel via Stripe Elements =====
+            <>
+              <StripePaymentForm
+                amount={effectiveAmount}
+                publishableKey={config.stripePublishableKey}
+                onSuccess={finalizePurchase}
+                onError={(m) => setErrors(m ? [m] : [])}
+              />
+
+              <div className="flex items-center justify-center gap-2 text-[11px] text-foreground/55">
+                <ShieldCheck className="size-3.5" />
+                Paiement sécurisé via Stripe. Vos données bancaires ne transitent jamais par nos
+                serveurs.
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(1)
+                  setErrors([])
+                }}
+                disabled={processing}
+                className="flex h-12 w-full items-center justify-center gap-1 border border-foreground/20 text-sm transition-colors hover:bg-foreground hover:text-white disabled:opacity-50"
+              >
+                <ArrowLeft className="size-4" /> Retour
+              </button>
+            </>
           ) : (
-            <div className="border border-foreground/10 bg-white p-4 text-center text-xs text-foreground/60">
-              Le formulaire de paiement sécurisé Stripe s&apos;affichera ici.
-            </div>
+            // ===== Mode test (Stripe non configuré) =====
+            <>
+              <div className="border border-terracotta/40 bg-terracotta/10 p-4 text-center">
+                <p className="text-sm font-medium text-terracotta">Mode test — paiement simulé</p>
+                <p className="mt-1 text-xs text-foreground/70">
+                  Stripe n&apos;est pas encore branché. La validation crée une vraie carte en base
+                  sans transaction bancaire.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-[11px] text-foreground/55">
+                <ShieldCheck className="size-3.5" />
+                Paiement sécurisé. Vos données bancaires ne transitent jamais par nos serveurs.
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep(1)
+                    setErrors([])
+                  }}
+                  disabled={processing}
+                  className="flex h-12 flex-1 items-center justify-center gap-1 border border-foreground/20 text-sm transition-colors hover:bg-foreground hover:text-white disabled:opacity-50"
+                >
+                  <ArrowLeft className="size-4" /> Retour
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTestPay}
+                  disabled={processing}
+                  className="flex h-12 flex-1 items-center justify-center gap-2 bg-sauge text-sm font-light tracking-wide text-white transition-colors hover:bg-sauge-deep disabled:opacity-50"
+                >
+                  {processing ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> Traitement…
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="size-4" /> Payer {eur(effectiveAmount)}
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
           )}
-
-          <div className="flex items-center justify-center gap-2 text-[11px] text-foreground/55">
-            <ShieldCheck className="size-3.5" />
-            Paiement sécurisé. Vos données bancaires ne transitent jamais par nos serveurs.
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setStep(1)
-                setErrors([])
-              }}
-              disabled={processing}
-              className="flex h-12 flex-1 items-center justify-center gap-1 border border-foreground/20 text-sm transition-colors hover:bg-foreground hover:text-white disabled:opacity-50"
-            >
-              <ArrowLeft className="size-4" /> Retour
-            </button>
-            <button
-              type="button"
-              onClick={handlePay}
-              disabled={processing}
-              className="flex h-12 flex-1 items-center justify-center gap-2 bg-sauge text-sm font-light tracking-wide text-white transition-colors hover:bg-sauge-deep disabled:opacity-50"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" /> Traitement…
-                </>
-              ) : (
-                <>
-                  <CreditCard className="size-4" /> Payer {eur(effectiveAmount)}
-                </>
-              )}
-            </button>
-          </div>
         </div>
       )}
 

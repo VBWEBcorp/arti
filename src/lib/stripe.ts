@@ -42,6 +42,33 @@ export async function isStripeConfigured(): Promise<boolean> {
   return !!getApiKeys().stripeSecretKey
 }
 
+/**
+ * Crée un PaymentIntent pour l'achat d'une carte cadeau et renvoie le
+ * client_secret (à consommer par Stripe Elements côté front). Lève si Stripe
+ * n'est pas configuré.
+ *
+ * `allow_redirects: 'never'` n'autorise que les moyens de paiement sans
+ * redirection (carte, etc.) : pas de return_url à gérer, le paiement se
+ * confirme sur place.
+ */
+export async function createGiftCardPaymentIntent(
+  amountEuros: number,
+  metadata: Record<string, string> = {}
+): Promise<{ clientSecret: string; paymentIntentId: string }> {
+  const stripe = await getStripe()
+  const pi = await stripe.paymentIntents.create({
+    amount: Math.round(amountEuros * 100),
+    currency: 'eur',
+    description: `Carte cadeau ARTI — ${amountEuros}€`,
+    automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+    metadata,
+  })
+  if (!pi.client_secret) {
+    throw new Error('Stripe n’a pas renvoyé de client_secret')
+  }
+  return { clientSecret: pi.client_secret, paymentIntentId: pi.id }
+}
+
 export type PaymentVerification = {
   ok: boolean
   testMode: boolean
