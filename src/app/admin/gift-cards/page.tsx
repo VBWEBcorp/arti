@@ -469,20 +469,20 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 /* ---------- Utilisation sur place ---------- */
 function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [code, setCode] = useState('')
-  const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ remainingBalance: number } | null>(null)
+  const [result, setResult] = useState<{ amount: number } | null>(null)
 
   const submit = async () => {
+    if (!confirm('Utiliser cette carte ? Elle est à usage unique et sera entièrement consommée.')) return
     setSaving(true)
     setError(null)
     try {
       const res = await fetch('/api/gift-cards/redeem', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ code: code.trim(), amount: Number(amount), description: description || undefined }),
+        body: JSON.stringify({ code: code.trim(), description: description || undefined }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erreur')
@@ -496,7 +496,7 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
   }
 
   return (
-    <Modal title="Utiliser une carte" subtitle="Débit au comptoir" onClose={onClose}>
+    <Modal title="Utiliser une carte" subtitle="Carte à usage unique — consommée en entier" onClose={onClose}>
       <div className="space-y-4">
         <div>
           <label className={labelCls}>Code de la carte</label>
@@ -508,24 +508,20 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
           />
         </div>
         <div>
-          <label className={labelCls}>Montant à débiter (€)</label>
-          <input type="number" min={0.01} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>Description (optionnel)</label>
+          <label className={labelCls}>Note (optionnel)</label>
           <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={200} className={inputCls} />
         </div>
 
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         {result && (
           <p className="rounded-md bg-sauge/15 px-3 py-2 text-sm text-sauge-deep">
-            Débité. Solde restant : <strong>{eur(result.remainingBalance)}</strong>
+            Carte utilisée — valeur <strong>{eur(result.amount)}</strong>.
           </p>
         )}
 
-        <button onClick={submit} disabled={saving} className={cn(btnPrimary, 'w-full')}>
+        <button onClick={submit} disabled={saving || !code.trim() || !!result} className={cn(btnPrimary, 'w-full')}>
           {saving ? <Loader2 className="size-4 animate-spin" /> : <ScanLine className="size-4" />}
-          Débiter la carte
+          Utiliser la carte
         </button>
       </div>
     </Modal>

@@ -22,6 +22,13 @@ export const GIFT_CARD_PRESETS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as co
 export const MIN_AMOUNT = 5
 export const MAX_AMOUNT = 500
 
+/** Validité par défaut des cartes cadeaux : 1 an à compter de maintenant. */
+function oneYearFromNow(): Date {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + 1)
+  return d
+}
+
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -94,7 +101,8 @@ export async function createGiftCard(data: CreateData, adminId: string | null = 
     imageUrl: data.imageUrl || null,
     stripePaymentIntentId: data.stripePaymentIntentId || null,
     stripeReceiptUrl: data.stripeReceiptUrl || null,
-    expiresAt: data.expiresAt || null,
+    // Carte à usage unique, valable 1 an : expiration par défaut à +1 an.
+    expiresAt: data.expiresAt || oneYearFromNow(),
     source,
     createdByAdmin: objectIdOrNull(adminId),
     transactions: [
@@ -184,39 +192,58 @@ export async function checkBalance(code: string) {
   }
 }
 
-/** Rédemption sur place (staff). Déduction atomique pour éviter les race conditions. */
+/**
+ * Utilisation sur place (staff). Carte à USAGE UNIQUE : elle est consommée en
+ * entier d'un coup (pas de débit partiel ni de solde réutilisable).
+ * Le passage actif -> utilisé est atomique (filtre `status: 'active'`) pour
+ * empêcher une double utilisation concurrente.
+ */
 export async function redeemOnSite(
   code: string,
-  amount: number,
   staffUser: { id: string; name: string },
   description: string | null = null
 ): Promise<IGiftCard> {
   await connectDB()
-  const roundedAmount = Math.round(amount * 100) / 100
+  const normalized = code.toUpperCase().trim()
 
+  const card = await GiftCard.findOne({ code: normalized })
+  if (!card) throw new GiftCardError('Carte cadeau introuvable', 404)
+
+  // Auto-expiration avant utilisation.
+  if (card.status === 'active' && card.expiresAt && card.expiresAt < new Date()) {
+    card.status = 'expired'
+    await card.save()
+  }
+  if (card.status !== 'active') {
+    const label =
+      card.status === 'used' ? 'déjà utilisée' : card.status === 'expired' ? 'expirée' : 'annulée'
+    throw new GiftCardError(`Cette carte cadeau est ${label}`)
+  }
+
+  const value = card.balance
+
+  // Flip atomique actif -> utilisé : seule la 1re requête concurrente gagne.
   const giftCard = await GiftCard.findOneAndUpdate(
-    { code: code.toUpperCase().trim(), status: 'active', balance: { $gte: roundedAmount } },
-    { $inc: { balance: -roundedAmount } },
+    { _id: card._id, status: 'active' },
+    {
+      $set: { status: 'used', balance: 0 },
+      $push: {
+        transactions: {
+          type: 'redemption_on_site',
+          amount: value,
+          balanceAfter: 0,
+          description: description || 'Utilisation sur place (usage unique)',
+          performedBy: { userId: objectIdOrNull(staffUser.id), name: staffUser.name },
+          createdAt: new Date(),
+        },
+      },
+    },
     { new: true }
   )
 
-  if (!giftCard) {
-    throw new GiftCardError('Carte cadeau introuvable, inactive ou solde insuffisant')
-  }
+  if (!giftCard) throw new GiftCardError('Cette carte cadeau vient d\'être utilisée')
 
-  giftCard.transactions.push({
-    type: 'redemption_on_site',
-    amount: roundedAmount,
-    balanceAfter: giftCard.balance,
-    description: description || 'Utilisation sur place',
-    performedBy: { userId: objectIdOrNull(staffUser.id), name: staffUser.name },
-    createdAt: new Date(),
-  })
-
-  if (giftCard.balance === 0) giftCard.status = 'used'
-  await giftCard.save()
-
-  console.log(`[giftcard] utilisée sur place ${giftCard.code} — ${roundedAmount}€, reste ${giftCard.balance}€`)
+  console.log(`[giftcard] utilisée (usage unique) ${giftCard.code} — ${value}€`)
   return giftCard
 }
 
@@ -269,11 +296,8 @@ export async function purchaseGiftCard(
     throw new GiftCardError(verification.reason || "Le paiement n'a pas pu être vérifié", 402)
   }
 
-  // Carte achetée en ligne : valable 1 an à compter de l'achat.
-  const expiresAt = new Date()
-  expiresAt.setFullYear(expiresAt.getFullYear() + 1)
-
   try {
+    // expiresAt non fourni : createGiftCard applique la validité 1 an par défaut.
     return await createGiftCard({
       initialAmount: data.amount,
       source: 'online',
@@ -281,7 +305,6 @@ export async function purchaseGiftCard(
       recipient: data.recipient || {},
       stripePaymentIntentId,
       stripeReceiptUrl: verification.receiptUrl,
-      expiresAt,
     })
   } catch (err) {
     // Course entre deux requêtes concurrentes : l'index unique a bloqué la
@@ -337,7 +360,7 @@ function giftCardEmailHtml(opts: {
         <p style="margin:0 0 4px;font-size:13px;color:#8a8f88;text-transform:uppercase;letter-spacing:.08em;">Code de la carte</p>
         <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:.1em;color:#1f2421;font-family:monospace;">${giftCard.code}</p>
         <p style="margin:8px 0 0;font-size:14px;color:#3a3f3b;">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
-        ${giftCard.expiresAt ? `<p style="margin:6px 0 0;font-size:13px;color:#8a8f88;">Valable jusqu'au ${frDate(giftCard.expiresAt)}</p>` : ''}
+        <p style="margin:6px 0 0;font-size:13px;color:#8a8f88;">Carte à usage unique${giftCard.expiresAt ? ` · valable jusqu'au ${frDate(giftCard.expiresAt)}` : ''}</p>
       </div>
       ${giftCard.recipient?.message ? `<p style="margin:18px 0 0;font-style:italic;color:#5a5f5b;">« ${escapeHtml(giftCard.recipient.message)} »</p>` : ''}
     </div>
