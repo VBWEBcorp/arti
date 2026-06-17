@@ -61,22 +61,21 @@ export async function renderGiftCardPdf(card: {
     verso.drawText(t, { x: center - w / 2, y, size, font: f, color: ink })
   }
 
-  // Numero : a droite du libelle (cale pour ne pas deborder sur @arti.rennes).
-  {
-    const size = 11
-    const w = bold.widthOfTextAtSize(card.code, size)
-    const x = Math.min(242, 286 - w)
-    verso.drawText(card.code, { x, y: 356, size, font: bold, color: ink })
-  }
+  // Positions calees sur les vraies lignes du modele (mesurees en pt) : chaque
+  // valeur est posee ~10 pt AU-DESSUS de sa ligne pour degager le libelle dessous.
+  // Lignes : Valeur 297.3 / A l'attention de 251.0 / Valable jusqu'au 205.8.
+
+  // Numero : sous le libelle « N » (cale a gauche du N, pas de chevauchement).
+  verso.drawText(card.code, { x: 210, y: 337, size: 11, font: bold, color: ink })
 
   // Valeur (montant)
-  drawCentered(eur(card.amount), 307, 13, bold)
+  drawCentered(eur(card.amount), 308, 13, bold)
 
   // A l'attention de (si destinataire nomme)
-  if (card.recipientName) drawCentered(truncate(card.recipientName, 28), 257, 12)
+  if (card.recipientName) drawCentered(truncate(card.recipientName, 28), 261, 12)
 
   // Valable jusqu'au (date de peremption)
-  if (card.expiresAt) drawCentered(longDate(new Date(card.expiresAt)), 207, 12)
+  if (card.expiresAt) drawCentered(longDate(new Date(card.expiresAt)), 216, 12)
 
   return Buffer.from(await doc.save())
 }
