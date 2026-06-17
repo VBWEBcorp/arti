@@ -362,6 +362,7 @@ function ConfirmDialog({
   message,
   confirmLabel,
   tone,
+  icon: Icon,
   loading,
   error,
   onConfirm,
@@ -371,11 +372,13 @@ function ConfirmDialog({
   message: string
   confirmLabel: string
   tone: 'danger' | 'primary'
+  icon?: React.ComponentType<{ className?: string }>
   loading: boolean
   error: string | null
   onConfirm: () => void
   onClose: () => void
 }) {
+  const IconCmp = Icon || (tone === 'danger' ? AlertTriangle : RefreshCw)
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-navy/50 p-4 backdrop-blur-sm"
@@ -392,7 +395,7 @@ function ConfirmDialog({
               tone === 'danger' ? 'bg-red-50 text-red-600' : 'bg-sauge/15 text-sauge-deep'
             )}
           >
-            {tone === 'danger' ? <AlertTriangle className="size-5" /> : <RefreshCw className="size-5" />}
+            <IconCmp className="size-5" />
           </span>
           <div className="min-w-0">
             <h3 className="font-display text-2xl font-medium leading-tight text-foreground">{title}</h3>
@@ -620,12 +623,13 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [code, setCode] = useState('')
   const [description, setDescription] = useState('')
+  const [confirming, setConfirming] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ amount: number } | null>(null)
 
-  const submit = async () => {
-    if (!confirm('Utiliser cette carte ? Elle est à usage unique et sera entièrement consommée.')) return
+  // Exécute l'utilisation après confirmation dans la pop-up.
+  const doRedeem = async () => {
     setSaving(true)
     setError(null)
     try {
@@ -634,12 +638,17 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
         headers: authHeaders(),
         body: JSON.stringify({ code: code.trim(), description: description || undefined }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Erreur')
+      setConfirming(false)
       setResult(data)
       onDone()
     } catch (err) {
-      setError((err as Error).message)
+      setError(
+        err instanceof TypeError
+          ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
+          : (err as Error).message
+      )
     } finally {
       setSaving(false)
     }
@@ -662,18 +671,42 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
           <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={200} className={inputCls} />
         </div>
 
-        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         {result && (
           <p className="rounded-md bg-sauge/15 px-3 py-2 text-sm text-sauge-deep">
             Carte utilisée — valeur <strong>{eur(result.amount)}</strong>.
           </p>
         )}
 
-        <button onClick={submit} disabled={saving || !code.trim() || !!result} className={cn(btnPrimary, 'w-full')}>
-          {saving ? <Loader2 className="size-4 animate-spin" /> : <ScanLine className="size-4" />}
+        <button
+          onClick={() => {
+            setError(null)
+            setConfirming(true)
+          }}
+          disabled={saving || !code.trim() || !!result}
+          className={cn(btnPrimary, 'w-full')}
+        >
+          <ScanLine className="size-4" />
           Utiliser la carte
         </button>
       </div>
+
+      {confirming && (
+        <ConfirmDialog
+          title="Utiliser cette carte ?"
+          message={`La carte ${code.trim()} sera entièrement consommée (usage unique). Cette action est définitive.`}
+          confirmLabel="Utiliser la carte"
+          tone="primary"
+          icon={ScanLine}
+          loading={saving}
+          error={error}
+          onConfirm={doRedeem}
+          onClose={() => {
+            if (saving) return
+            setConfirming(false)
+            setError(null)
+          }}
+        />
+      )}
     </Modal>
   )
 }
