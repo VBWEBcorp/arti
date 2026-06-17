@@ -109,11 +109,13 @@ export async function renderGiftCardPdf(card: {
   // Valable jusqu'au (date de peremption)
   if (card.expiresAt) drawCentered(longDate(new Date(card.expiresAt)), RULE_VALABLE + 10, 12)
 
-  // Message : decoupe sur les lignes « Message », en italique centre.
+  // Message : decoupe sur les lignes « Message », aligne a gauche et pose sur
+  // les lignes (comme une note manuscrite). Italique, tronque a 5 lignes.
   const rawMsg = card.message ? pdfSafe(card.message).replace(/\s+/g, ' ').trim() : ''
   if (rawMsg) {
-    const size = 9.5
-    const maxWidth = 212
+    const size = 10
+    const left = 40
+    const maxWidth = width - left * 2 // marges symetriques
     const max = RULES_MESSAGE.length
     let lines = wrapText(rawMsg, italic, size, maxWidth)
     if (lines.length > max) {
@@ -123,8 +125,7 @@ export async function renderGiftCardPdf(card: {
       lines[max - 1] = `${last.replace(/\s+$/, '')}…`
     }
     lines.forEach((line, i) => {
-      const w = italic.widthOfTextAtSize(line, size)
-      verso.drawText(line, { x: center - w / 2, y: RULES_MESSAGE[i] + 2.5, size, font: italic, color: ink })
+      verso.drawText(line, { x: left, y: RULES_MESSAGE[i] + 2.5, size, font: italic, color: ink })
     })
   }
 
