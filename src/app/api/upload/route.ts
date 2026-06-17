@@ -4,7 +4,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { r2Enabled, uploadToR2 } from '@/lib/r2'
-import { optimizeImage } from '@/lib/optimize-image'
+import { optimizeImage, averageLuminance } from '@/lib/optimize-image'
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,9 +72,21 @@ export async function POST(request: NextRequest) {
     const originalSize = (rawBuffer.length / 1024).toFixed(1)
     const optimizedSize = (finalBuffer.length / 1024).toFixed(1)
 
+    // Luminosité de l'image (pour choisir une couleur de texte lisible côté admin).
+    // Null pour les SVG (pas d'analyse pixel fiable).
+    let isDark: boolean | null = null
+    if (!isSvg) {
+      try {
+        isDark = (await averageLuminance(rawBuffer)) < 130
+      } catch {
+        isDark = null
+      }
+    }
+
     return NextResponse.json({
       url,
       filename,
+      isDark,
       originalSize: `${originalSize} Ko`,
       optimizedSize: `${optimizedSize} Ko`,
       storage: r2Enabled ? 'cloudflare-r2' : 'local',

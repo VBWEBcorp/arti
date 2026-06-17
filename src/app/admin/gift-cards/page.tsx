@@ -84,8 +84,8 @@ function authHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }
 
-/** Upload une image vers /api/upload (admin) et renvoie son URL. Lève en cas d'échec. */
-async function uploadImage(file: File): Promise<string> {
+/** Upload une image vers /api/upload (admin). Renvoie l'URL + la luminosité. Lève en cas d'échec. */
+async function uploadImage(file: File): Promise<{ url: string; isDark: boolean | null }> {
   const token = localStorage.getItem('authToken')
   const fd = new FormData()
   fd.append('file', file)
@@ -96,7 +96,7 @@ async function uploadImage(file: File): Promise<string> {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || "Échec de l'upload")
-  return data.url as string
+  return { url: data.url as string, isDark: (data.isDark ?? null) as boolean | null }
 }
 
 export default function AdminGiftCardsPage() {
@@ -415,7 +415,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     setUploading(true)
     setError(null)
     try {
-      setBgUrl(await uploadImage(file))
+      const { url } = await uploadImage(file)
+      setBgUrl(url)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -645,7 +646,13 @@ function DesignModal({ onClose }: { onClose: () => void }) {
     setUploading(true)
     setError(null)
     try {
-      patch({ backgroundUrl: await uploadImage(file) })
+      const { url, isDark } = await uploadImage(file)
+      // Auto-contraste : image sombre -> texte blanc ; image claire -> texte foncé.
+      // L'admin peut toujours ajuster ensuite avec le sélecteur de couleur.
+      patch({
+        backgroundUrl: url,
+        ...(isDark !== null ? { textColor: isDark ? '#ffffff' : '#1f2421' } : {}),
+      })
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -743,26 +750,44 @@ function DesignModal({ onClose }: { onClose: () => void }) {
           {/* Couleur du texte */}
           <div>
             <label className={labelCls}>Couleur du texte</label>
-            <div className="flex gap-2">
-              {([
-                { v: 'light', label: 'Clair (blanc)' },
-                { v: 'dark', label: 'Foncé (sombre)' },
-              ] as const).map((o) => (
-                <button
-                  key={o.v}
-                  type="button"
-                  onClick={() => patch({ textColor: o.v })}
-                  className={cn(
-                    'h-10 flex-1 rounded-md border text-sm font-medium transition-colors',
-                    design.textColor === o.v
-                      ? 'border-sauge bg-sauge text-white'
-                      : 'border-foreground/15 bg-white text-foreground hover:bg-beige'
-                  )}
-                >
-                  {o.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={design.textColor}
+                onChange={(e) => patch({ textColor: e.target.value })}
+                className="h-10 w-14 cursor-pointer rounded-md border border-foreground/15 bg-white p-1"
+                aria-label="Couleur du texte"
+              />
+              <input
+                type="text"
+                value={design.textColor}
+                onChange={(e) => patch({ textColor: e.target.value })}
+                placeholder="#ffffff"
+                className={cn(inputCls, 'w-28 font-mono uppercase')}
+              />
+              <div className="flex gap-1.5">
+                {[
+                  { hex: '#ffffff', label: 'Blanc' },
+                  { hex: '#1f2421', label: 'Noir' },
+                  { hex: '#7d8a6f', label: 'Sauge' },
+                ].map((s) => (
+                  <button
+                    key={s.hex}
+                    type="button"
+                    title={s.label}
+                    onClick={() => patch({ textColor: s.hex })}
+                    className={cn(
+                      'size-8 rounded-full border transition-transform hover:scale-110',
+                      design.textColor.toLowerCase() === s.hex ? 'border-sauge ring-2 ring-sauge' : 'border-foreground/20'
+                    )}
+                    style={{ backgroundColor: s.hex }}
+                  />
+                ))}
+              </div>
             </div>
+            <p className="mt-1.5 text-xs text-foreground/50">
+              Réglée automatiquement à l&apos;upload (blanc si l&apos;image est sombre, foncé si elle est claire) — tu peux l&apos;ajuster ici. Le logo s&apos;adapte aussi.
+            </p>
           </div>
 
           {/* Voile de lisibilité */}

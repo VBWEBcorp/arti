@@ -128,7 +128,7 @@ export const GiftCard =
 
 export interface IGiftCardSettings extends Document {
   backgroundUrl: string | null
-  textColor: 'light' | 'dark'
+  textColor: string
   scrim: number
   heading: string
   updatedAt: Date
@@ -137,7 +137,9 @@ export interface IGiftCardSettings extends Document {
 const GiftCardSettingsSchema = new Schema<IGiftCardSettings>(
   {
     backgroundUrl: { type: String, default: null },
-    textColor: { type: String, enum: ['light', 'dark'], default: 'light' },
+    // Couleur du texte en hex (#rrggbb). Les anciennes valeurs light/dark sont
+    // mappées à la lecture par normalizeGiftCardDesign.
+    textColor: { type: String, default: '#ffffff' },
     scrim: { type: Number, default: 0, min: 0, max: 80 },
     heading: { type: String, default: 'Carte cadeau' },
   },

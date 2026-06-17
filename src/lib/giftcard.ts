@@ -4,7 +4,8 @@ import mongoose from 'mongoose'
 import { connectDB } from '@/lib/db'
 import { GiftCard, GiftCardSettings, type IGiftCard, type GiftCardSource } from '@/models/GiftCard'
 import { verifyGiftCardPayment } from '@/lib/stripe'
-import { sendEmail } from '@/lib/resend'
+import { sendEmail, type EmailAttachment } from '@/lib/resend'
+import { renderGiftCardImage } from '@/lib/gift-card-image'
 import {
   type GiftCardDesign,
   GIFT_CARD_DESIGN_DEFAULT,
@@ -343,30 +344,23 @@ function giftCardEmailHtml(opts: {
   title: string
   intro: string
   giftCard: IGiftCard
-  design: GiftCardDesign
 }): string {
-  const { title, intro, giftCard, design } = opts
+  const { title, intro, giftCard } = opts
 
-  // Le fond personnalisé est repris dans la "carte" de l'email. Outlook desktop
-  // ignore background-image et retombe sur la couleur de fond (dégradé propre).
-  const hasBg = !!design.backgroundUrl
-  const dark = design.textColor === 'dark'
-  const ink = dark ? '#1f2421' : '#ffffff'
-  const inkMuted = dark ? '#5a5f5b' : 'rgba(255,255,255,0.85)'
-  const overlay = dark
-    ? `rgba(255,255,255,${design.scrim / 100})`
-    : `rgba(0,0,0,${design.scrim / 100})`
-
-  const boxStyle = hasBg
-    ? `border-radius:12px;padding:26px 20px;text-align:center;background-color:#7d8a6f;background-image:linear-gradient(${overlay},${overlay}),url('${design.backgroundUrl}');background-size:cover;background-position:center;`
-    : `border:1px solid #e6e3dc;border-radius:12px;padding:20px;text-align:center;background:#faf9f6;`
-  const labelColor = hasBg ? inkMuted : '#8a8f88'
-  const codeColor = hasBg ? ink : '#1f2421'
-  const amountColor = hasBg ? ink : '#3a3f3b'
+  // La carte est jointe à l'email en image (PNG, fond + texte + code gravés).
+  // On ne l'affiche pas dans le corps : Gmail ne rend pas les images inline CID
+  // (icône cassée). Le corps reste donc en texte (toujours lisible, dark mode
+  // compris) et la jolie carte est en pièce jointe téléchargeable.
 
   return `<!DOCTYPE html>
 <html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>:root{color-scheme:light dark;supported-color-schemes:light dark;}</style>
+</head>
 <body style="margin:0;padding:0;background:#f6f5f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;">
     <div style="padding:32px 28px 16px;text-align:center;border-bottom:1px solid #f0eee9;">
@@ -375,10 +369,10 @@ function giftCardEmailHtml(opts: {
     <div style="padding:28px;color:#3a3f3b;font-size:15px;line-height:1.7;">
       <h2 style="margin:0 0 14px;font-size:22px;color:#1f2421;">${title}</h2>
       <p style="margin:0 0 18px;">${intro}</p>
-      <div style="${boxStyle}">
-        <p style="margin:0 0 6px;font-size:13px;color:${labelColor};text-transform:uppercase;letter-spacing:.08em;">${escapeHtml(design.heading)}</p>
-        <p style="margin:0 0 14px;font-size:24px;font-weight:700;letter-spacing:.1em;color:${codeColor};font-family:monospace;">${giftCard.code}</p>
-        <p style="margin:0;font-size:15px;color:${amountColor};">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
+      <div style="border:1px solid #e6e3dc;border-radius:12px;padding:16px;text-align:center;background:#faf9f6;">
+        <p style="margin:0 0 4px;font-size:13px;color:#8a8f88;text-transform:uppercase;letter-spacing:.08em;">Code de la carte</p>
+        <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:.1em;color:#1f2421;font-family:monospace;">${giftCard.code}</p>
+        <p style="margin:8px 0 0;font-size:14px;color:#3a3f3b;">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
       </div>
       ${giftCard.recipient?.message ? `<p style="margin:18px 0 0;font-style:italic;color:#5a5f5b;">« ${escapeHtml(giftCard.recipient.message)} »</p>` : ''}
     </div>
@@ -402,13 +396,31 @@ function escapeHtml(str: string): string {
 
 /** Envoi des emails de carte cadeau (acheteur + destinataire) via Resend. */
 async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
-  // L'apparence personnalisée est reprise dans l'email reçu. Si la carte a son
-  // propre fond (override admin), il prime sur le fond global ; le reste du
-  // style (couleur, voile, titre) est hérité du modèle global.
+  // On génère la carte en image (fond + couleur appliqués côté serveur) et on la
+  // joint à l'email (CID). Échec de rendu non bloquant : l'email part quand même
+  // avec le code en texte.
   const globalDesign = await getGiftCardDesign()
   const design: GiftCardDesign = giftCard.imageUrl
     ? { ...globalDesign, backgroundUrl: giftCard.imageUrl }
     : globalDesign
+
+  let attachments: EmailAttachment[] | undefined
+  try {
+    const png = await renderGiftCardImage(design, {
+      amount: giftCard.initialAmount,
+      code: giftCard.code,
+      recipientName: giftCard.recipient?.name,
+      message: giftCard.recipient?.message,
+    })
+    attachments = [
+      {
+        filename: `carte-cadeau-${giftCard.code}.png`,
+        content: png.toString('base64'),
+      },
+    ]
+  } catch (err) {
+    console.error('[giftcard] rendu image carte échoué:', (err as Error).message)
+  }
 
   if (giftCard.purchasedBy?.email) {
     await sendEmail({
@@ -416,10 +428,10 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
       subject: `Votre carte cadeau ARTI — ${eur(giftCard.initialAmount)}`,
       html: giftCardEmailHtml({
         title: 'Merci pour votre achat',
-        intro: `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous.`,
+        intro: `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous. La carte est aussi en pièce jointe.`,
         giftCard,
-        design,
       }),
+      attachments,
     })
   }
 
@@ -431,8 +443,8 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
         title: 'Vous avez reçu une carte cadeau !',
         intro: `${giftCard.purchasedBy?.name || 'Une personne'} vous offre une carte cadeau ARTI d'un montant de ${eur(giftCard.initialAmount)}.`,
         giftCard,
-        design,
       }),
+      attachments,
       replyTo: giftCard.purchasedBy?.email || undefined,
     })
   }

@@ -1,6 +1,11 @@
 import Image from 'next/image'
 
-import { type GiftCardDesign, GIFT_CARD_DESIGN_DEFAULT } from '@/lib/gift-card-design'
+import {
+  type GiftCardDesign,
+  GIFT_CARD_DESIGN_DEFAULT,
+  hexToRgb,
+  isLightColor,
+} from '@/lib/gift-card-design'
 import { cn } from '@/lib/utils'
 
 type GiftCardVisualProps = {
@@ -33,10 +38,11 @@ export function GiftCardVisual({
 }: GiftCardVisualProps) {
   const d = design || GIFT_CARD_DESIGN_DEFAULT
   const hasBg = !!d.backgroundUrl
-  const dark = d.textColor === 'dark'
+  const lightText = isLightColor(d.textColor)
 
-  // Couleur d'encre adaptative (rgb) pour décliner les opacités sans classes fixes.
-  const ink = dark ? '31, 36, 33' : '255, 255, 255'
+  // Couleur d'encre adaptative (rgb depuis le hex) pour décliner les opacités.
+  const { r, g, b } = hexToRgb(d.textColor)
+  const ink = `${r}, ${g}, ${b}`
   const c = {
     full: { color: `rgb(${ink})` },
     strong: { color: `rgba(${ink}, 0.9)` },
@@ -45,9 +51,9 @@ export function GiftCardVisual({
   }
 
   // Voile : assombrit (texte clair) ou éclaircit (texte foncé) le fond.
-  const scrimColor = dark
-    ? `rgba(255, 255, 255, ${d.scrim / 100})`
-    : `rgba(0, 0, 0, ${d.scrim / 100})`
+  const scrimColor = lightText
+    ? `rgba(0, 0, 0, ${d.scrim / 100})`
+    : `rgba(255, 255, 255, ${d.scrim / 100})`
 
   return (
     <div
@@ -90,7 +96,7 @@ export function GiftCardVisual({
               height={48}
               className={cn(
                 'h-8 w-auto object-contain',
-                dark ? 'brightness-0' : 'brightness-0 invert'
+                lightText ? 'brightness-0 invert' : 'brightness-0'
               )}
             />
             <p

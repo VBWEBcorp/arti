@@ -32,3 +32,14 @@ export async function optimizeImage(
     ext: 'webp',
   }
 }
+
+/**
+ * Luminance moyenne perçue d'une image (0 = noir, 255 = blanc).
+ * Sert à choisir automatiquement une couleur de texte lisible par-dessus.
+ */
+export async function averageLuminance(buffer: Buffer): Promise<number> {
+  const { channels } = await sharp(buffer).stats()
+  const [r, g, b] = channels
+  if (!r || !g || !b) return 255 // image mono / sans couleur : on suppose claire
+  return 0.299 * r.mean + 0.587 * g.mean + 0.114 * b.mean
+}

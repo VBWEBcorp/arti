@@ -20,16 +20,26 @@ async function getResend(): Promise<Resend | null> {
   return resendInstance
 }
 
+export type EmailAttachment = {
+  filename: string
+  /** Contenu encodé en base64. */
+  content: string
+  /** Identifiant pour référencer l'image inline via <img src="cid:..."> (optionnel). */
+  contentId?: string
+}
+
 export async function sendEmail({
   to,
   subject,
   html,
   replyTo,
+  attachments,
 }: {
   to: string
   subject: string
   html: string
   replyTo?: string
+  attachments?: EmailAttachment[]
 }) {
   const client = await getResend()
   if (!client) return null
@@ -42,6 +52,15 @@ export async function sendEmail({
     subject,
     html,
     ...(replyTo ? { replyTo } : {}),
+    ...(attachments && attachments.length
+      ? {
+          attachments: attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+            ...(a.contentId ? { content_id: a.contentId } : {}),
+          })),
+        }
+      : {}),
   })
 
   // Le SDK Resend ne lève pas d'exception : il renvoie { data, error }.
