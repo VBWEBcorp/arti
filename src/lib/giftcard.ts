@@ -5,7 +5,7 @@ import { connectDB } from '@/lib/db'
 import { GiftCard, GiftCardSettings, type IGiftCard, type GiftCardSource } from '@/models/GiftCard'
 import { verifyGiftCardPayment } from '@/lib/stripe'
 import { sendEmail, type EmailAttachment } from '@/lib/resend'
-import { renderGiftCardImage } from '@/lib/gift-card-image'
+import { renderGiftCardPdf } from '@/lib/gift-card-pdf'
 import {
   type GiftCardDesign,
   GIFT_CARD_DESIGN_DEFAULT,
@@ -316,6 +316,10 @@ export async function purchaseGiftCard(
     throw new GiftCardError(verification.reason || "Le paiement n'a pas pu être vérifié", 402)
   }
 
+  // Carte achetée en ligne : valable 1 an à compter de l'achat.
+  const expiresAt = new Date()
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+
   try {
     return await createGiftCard({
       initialAmount: data.amount,
@@ -324,6 +328,7 @@ export async function purchaseGiftCard(
       recipient: data.recipient || {},
       stripePaymentIntentId,
       stripeReceiptUrl: verification.receiptUrl,
+      expiresAt,
     })
   } catch (err) {
     // Course entre deux requêtes concurrentes : l'index unique a bloqué la
@@ -338,6 +343,12 @@ export async function purchaseGiftCard(
 
 function eur(amount: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
+}
+
+function frDate(d: Date): string {
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(
+    new Date(d)
+  )
 }
 
 function giftCardEmailHtml(opts: {
@@ -373,6 +384,7 @@ function giftCardEmailHtml(opts: {
         <p style="margin:0 0 4px;font-size:13px;color:#8a8f88;text-transform:uppercase;letter-spacing:.08em;">Code de la carte</p>
         <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:.1em;color:#1f2421;font-family:monospace;">${giftCard.code}</p>
         <p style="margin:8px 0 0;font-size:14px;color:#3a3f3b;">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
+        ${giftCard.expiresAt ? `<p style="margin:6px 0 0;font-size:13px;color:#8a8f88;">Valable jusqu'au ${frDate(giftCard.expiresAt)}</p>` : ''}
       </div>
       ${giftCard.recipient?.message ? `<p style="margin:18px 0 0;font-style:italic;color:#5a5f5b;">« ${escapeHtml(giftCard.recipient.message)} »</p>` : ''}
     </div>
@@ -396,30 +408,25 @@ function escapeHtml(str: string): string {
 
 /** Envoi des emails de carte cadeau (acheteur + destinataire) via Resend. */
 async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
-  // On génère la carte en image (fond + couleur appliqués côté serveur) et on la
-  // joint à l'email (CID). Échec de rendu non bloquant : l'email part quand même
-  // avec le code en texte.
-  const globalDesign = await getGiftCardDesign()
-  const design: GiftCardDesign = giftCard.imageUrl
-    ? { ...globalDesign, backgroundUrl: giftCard.imageUrl }
-    : globalDesign
-
+  // On remplit le visuel officiel (PDF : recto illustré + verso avec numéro,
+  // montant et date de validité) et on le joint à l'email. Échec de rendu non
+  // bloquant : l'email part quand même avec le code et la validité en texte.
   let attachments: EmailAttachment[] | undefined
   try {
-    const png = await renderGiftCardImage(design, {
-      amount: giftCard.initialAmount,
+    const pdf = await renderGiftCardPdf({
       code: giftCard.code,
+      amount: giftCard.initialAmount,
+      expiresAt: giftCard.expiresAt,
       recipientName: giftCard.recipient?.name,
-      message: giftCard.recipient?.message,
     })
     attachments = [
       {
-        filename: `carte-cadeau-${giftCard.code}.png`,
-        content: png.toString('base64'),
+        filename: `carte-cadeau-${giftCard.code}.pdf`,
+        content: pdf.toString('base64'),
       },
     ]
   } catch (err) {
-    console.error('[giftcard] rendu image carte échoué:', (err as Error).message)
+    console.error('[giftcard] rendu PDF carte échoué:', (err as Error).message)
   }
 
   if (giftCard.purchasedBy?.email) {
@@ -428,7 +435,7 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
       subject: `Votre carte cadeau ARTI — ${eur(giftCard.initialAmount)}`,
       html: giftCardEmailHtml({
         title: 'Merci pour votre achat',
-        intro: `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous. La carte est aussi en pièce jointe.`,
+        intro: `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous. La carte complète (avec le numéro et la date de validité) est en pièce jointe au format PDF.`,
         giftCard,
       }),
       attachments,
@@ -441,7 +448,7 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
       subject: `${giftCard.purchasedBy?.name || 'Quelqu\'un'} vous offre une carte cadeau ARTI`,
       html: giftCardEmailHtml({
         title: 'Vous avez reçu une carte cadeau !',
-        intro: `${giftCard.purchasedBy?.name || 'Une personne'} vous offre une carte cadeau ARTI d'un montant de ${eur(giftCard.initialAmount)}.`,
+        intro: `${giftCard.purchasedBy?.name || 'Une personne'} vous offre une carte cadeau ARTI d'un montant de ${eur(giftCard.initialAmount)}. Votre carte (numéro et date de validité) est en pièce jointe au format PDF.`,
         giftCard,
       }),
       attachments,
