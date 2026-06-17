@@ -272,6 +272,42 @@ export async function cancelGiftCard(
   return giftCard
 }
 
+/**
+ * Réactive une carte annulée par erreur. Restaure le solde qui avait été annulé
+ * (montant de la dernière annulation) : carte de nouveau active si ce solde est
+ * positif, sinon remise dans l'état « utilisée ».
+ */
+export async function reactivateGiftCard(
+  id: string,
+  adminUser: { id: string; name: string }
+): Promise<IGiftCard> {
+  await connectDB()
+  const giftCard = await GiftCard.findById(id)
+  if (!giftCard) throw new GiftCardError('Carte cadeau introuvable', 404)
+  if (giftCard.status !== 'cancelled') {
+    throw new GiftCardError('Seule une carte annulée peut être réactivée')
+  }
+
+  // Solde restauré = montant voilé par la dernière annulation (sinon valeur initiale).
+  const lastCancel = [...giftCard.transactions].reverse().find((t) => t.type === 'cancellation')
+  const restored = lastCancel ? lastCancel.amount : giftCard.initialAmount
+
+  giftCard.balance = restored
+  giftCard.status = restored > 0 ? 'active' : 'used'
+  giftCard.transactions.push({
+    type: 'reactivation',
+    amount: restored,
+    balanceAfter: restored,
+    description: 'Réactivation (annulation corrigée)',
+    performedBy: { userId: objectIdOrNull(adminUser.id), name: adminUser.name },
+    createdAt: new Date(),
+  })
+  await giftCard.save()
+
+  console.log(`[giftcard] réactivée ${giftCard.code} par ${adminUser?.name} — ${restored}€`)
+  return giftCard
+}
+
 type PurchaseData = {
   amount: number
   purchaser?: { name?: string; email?: string; userId?: string | null }

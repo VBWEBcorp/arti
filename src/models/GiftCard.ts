@@ -8,6 +8,7 @@ export type GiftCardTxType =
   | 'redemption_on_site'
   | 'refund'
   | 'cancellation'
+  | 'reactivation'
 
 export interface IGiftCardTransaction {
   type: GiftCardTxType
@@ -78,7 +79,7 @@ const GiftCardSchema = new Schema<IGiftCard>(
       {
         type: {
           type: String,
-          enum: ['purchase', 'redemption', 'redemption_on_site', 'refund', 'cancellation'],
+          enum: ['purchase', 'redemption', 'redemption_on_site', 'refund', 'cancellation', 'reactivation'],
           required: true,
         },
         amount: { type: Number, required: true },

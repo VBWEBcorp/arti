@@ -140,6 +140,18 @@ export default function AdminGiftCardsPage() {
     }
   }
 
+  const reactivateCard = async (id: string) => {
+    if (!confirm('Réactiver cette carte ? Elle redeviendra utilisable (annulation corrigée).')) return
+    const res = await fetch(`/api/gift-cards/${id}/reactivate`, { method: 'PATCH', headers: authHeaders() })
+    if (res.ok) {
+      setDetail(null)
+      load()
+    } else {
+      const d = await res.json()
+      alert(d.error || 'Erreur')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-beige-light/50">
       {/* En-tête */}
@@ -290,7 +302,14 @@ export default function AdminGiftCardsPage() {
         <CreateModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); load() }} />
       )}
       {showRedeem && <RedeemModal onClose={() => setShowRedeem(false)} onDone={load} />}
-      {detail && <DetailModal card={detail} onClose={() => setDetail(null)} onCancel={cancelCard} />}
+      {detail && (
+        <DetailModal
+          card={detail}
+          onClose={() => setDetail(null)}
+          onCancel={cancelCard}
+          onReactivate={reactivateCard}
+        />
+      )}
     </div>
   )
 }
@@ -533,10 +552,12 @@ function DetailModal({
   card,
   onClose,
   onCancel,
+  onReactivate,
 }: {
   card: GiftCard
   onClose: () => void
   onCancel: (id: string) => void
+  onReactivate: (id: string) => void
 }) {
   const pct = card.initialAmount > 0 ? Math.round((card.balance / card.initialAmount) * 100) : 0
   return (
@@ -615,7 +636,11 @@ function DetailModal({
           </div>
         )}
 
-        {card.status !== 'cancelled' && (
+        {card.status === 'cancelled' ? (
+          <button onClick={() => onReactivate(card._id)} className={cn(btnPrimary, 'w-full')}>
+            <RefreshCw className="size-4" /> Réactiver la carte
+          </button>
+        ) : (
           <button onClick={() => onCancel(card._id)} className={btnDanger}>
             <Ban className="size-4" /> Annuler la carte
           </button>
