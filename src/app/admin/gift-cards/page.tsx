@@ -128,29 +128,30 @@ export default function AdminGiftCardsPage() {
     }
   }, [cards])
 
-  const cancelCard = async (id: string) => {
-    if (!confirm('Annuler cette carte cadeau ? Le solde sera perdu.')) return
-    const res = await fetch(`/api/gift-cards/${id}/cancel`, { method: 'PATCH', headers: authHeaders() })
-    if (res.ok) {
+  // Action admin sur une carte (annuler / réactiver). Gère proprement les
+  // erreurs serveur ET réseau (« Failed to fetch » si le serveur est injoignable).
+  const patchCard = async (id: string, action: 'cancel' | 'reactivate', confirmMsg: string) => {
+    if (!confirm(confirmMsg)) return
+    try {
+      const res = await fetch(`/api/gift-cards/${id}/${action}`, { method: 'PATCH', headers: authHeaders() })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.error || 'Une erreur est survenue.')
       setDetail(null)
       load()
-    } else {
-      const d = await res.json()
-      alert(d.error || 'Erreur')
+    } catch (err) {
+      const msg =
+        err instanceof TypeError
+          ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
+          : (err as Error).message
+      alert(msg)
     }
   }
 
-  const reactivateCard = async (id: string) => {
-    if (!confirm('Réactiver cette carte ? Elle redeviendra utilisable (annulation corrigée).')) return
-    const res = await fetch(`/api/gift-cards/${id}/reactivate`, { method: 'PATCH', headers: authHeaders() })
-    if (res.ok) {
-      setDetail(null)
-      load()
-    } else {
-      const d = await res.json()
-      alert(d.error || 'Erreur')
-    }
-  }
+  const cancelCard = (id: string) =>
+    patchCard(id, 'cancel', 'Annuler cette carte ? Elle ne sera plus utilisable (réversible ensuite via « Réactiver »).')
+
+  const reactivateCard = (id: string) =>
+    patchCard(id, 'reactivate', 'Réactiver cette carte ? Elle redeviendra utilisable.')
 
   return (
     <div className="min-h-screen bg-beige-light/50">
