@@ -183,9 +183,9 @@ export default function AdminGiftCardsPage() {
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard icon={Gift} tone="sauge" label="Cartes actives" value={String(stats.activeCount)} />
-          <StatCard icon={Wallet} tone="terracotta" label="Solde en circulation" value={eur(stats.circulating)} />
+          <StatCard icon={Wallet} tone="terracotta" label="Valeur en circulation" value={eur(stats.circulating)} />
           <StatCard icon={Sparkles} tone="navy" label="Total émis" value={String(stats.total)} />
-          <StatCard icon={Ban} tone="muted" label="Épuisées" value={String(stats.used)} />
+          <StatCard icon={Ban} tone="muted" label="Utilisées" value={String(stats.used)} />
         </div>
 
         {/* Filtres */}
@@ -245,53 +245,42 @@ export default function AdminGiftCardsPage() {
             </div>
           ) : (
             <ul className="divide-y divide-foreground/10">
-              {cards.map((c) => {
-                const pct = c.initialAmount > 0 ? Math.round((c.balance / c.initialAmount) * 100) : 0
-                return (
-                  <li key={c._id}>
-                    <button
-                      onClick={() => setDetail(c)}
-                      className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-beige-light sm:px-5"
-                    >
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-beige text-sauge-deep">
-                        <Gift className="size-4" />
-                      </span>
+              {cards.map((c) => (
+                <li key={c._id}>
+                  <button
+                    onClick={() => setDetail(c)}
+                    className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-beige-light sm:px-5"
+                  >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-beige text-sauge-deep">
+                      <Gift className="size-4" />
+                    </span>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm font-semibold tracking-wide text-foreground">
-                            {c.code}
-                          </span>
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                              STATUS_CLASS[c.status]
-                            )}
-                          >
-                            {STATUS_LABEL[c.status]}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 truncate text-xs text-foreground/50">
-                          {c.recipient?.name || c.recipient?.email || c.purchasedBy?.email || 'Sans destinataire'}
-                          {' · '}
-                          {fmtDate(c.createdAt)}
-                        </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-semibold tracking-wide text-foreground">
+                          {c.code}
+                        </span>
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                            STATUS_CLASS[c.status]
+                          )}
+                        >
+                          {STATUS_LABEL[c.status]}
+                        </span>
                       </div>
+                      <p className="mt-0.5 truncate text-xs text-foreground/50">
+                        {c.recipient?.name || c.recipient?.email || c.purchasedBy?.email || 'Sans destinataire'}
+                        {c.expiresAt ? ` · valable jusqu'au ${fmtDate(c.expiresAt)}` : ` · créée le ${fmtDate(c.createdAt)}`}
+                      </p>
+                    </div>
 
-                      <div className="w-28 shrink-0 text-right">
-                        <p className="text-sm font-semibold text-foreground">{eur(c.balance)}</p>
-                        <div className="mt-1 h-1 overflow-hidden rounded-full bg-foreground/10">
-                          <div
-                            className={cn('h-full rounded-full', c.status === 'active' ? 'bg-sauge' : 'bg-foreground/25')}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <p className="mt-0.5 text-[10px] text-foreground/40">sur {eur(c.initialAmount)}</p>
-                      </div>
-                    </button>
-                  </li>
-                )
-              })}
+                    <p className="shrink-0 font-display text-xl font-medium leading-none text-foreground">
+                      {eur(c.initialAmount)}
+                    </p>
+                  </button>
+                </li>
+              ))}
             </ul>
           )}
         </div>
@@ -376,6 +365,17 @@ function Modal({
   )
 }
 
+/* ---------- Bloc de section de formulaire ---------- */
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/45">{title}</p>
+      {hint && <p className="mt-0.5 text-xs text-foreground/50">{hint}</p>}
+      <div className="mt-2 space-y-3">{children}</div>
+    </div>
+  )
+}
+
 /* ---------- Création ---------- */
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [amount, setAmount] = useState('30')
@@ -416,63 +416,70 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
   return (
     <Modal title="Nouvelle carte" subtitle="Création manuelle (sans paiement en ligne)" onClose={onClose}>
-      <div className="space-y-4">
-        {/* Aperçu de la carte (visuel de marque) */}
-        <div>
-          <label className={labelCls}>Aperçu</label>
-          <GiftCardVisual />
-          <p className="mt-1.5 text-xs text-foreground/50">
-            Le numéro, le montant et la date de validité sont remplis sur le PDF envoyé par email.
+      <div className="space-y-6">
+        {/* Bandeau d'info : visuel de marque compact */}
+        <div className="flex items-center gap-3 rounded-lg bg-beige-light p-3">
+          <GiftCardVisual className="w-16 shrink-0" />
+          <p className="text-xs leading-relaxed text-foreground/60">
+            Visuel de marque ARTI. Le <strong className="text-foreground/75">numéro</strong>, le{' '}
+            <strong className="text-foreground/75">montant</strong> et la{' '}
+            <strong className="text-foreground/75">date de validité</strong> sont remplis sur le PDF
+            envoyé par email.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Montant (€)</label>
-            <input type="number" min={5} max={500} value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls} />
+        <Section title="Carte">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Montant (€)</label>
+              <input type="number" min={5} max={500} value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Source</label>
+              <select value={source} onChange={(e) => setSource(e.target.value)} className={inputCls}>
+                <option value="admin">Création admin</option>
+                <option value="on_site">Vente sur place</option>
+                <option value="avoir">Avoir client</option>
+                <option value="employee_benefit">Avantage employé</option>
+              </select>
+            </div>
           </div>
           <div>
-            <label className={labelCls}>Source</label>
-            <select value={source} onChange={(e) => setSource(e.target.value)} className={inputCls}>
-              <option value="admin">Création admin</option>
-              <option value="on_site">Vente sur place</option>
-              <option value="avoir">Avoir client</option>
-              <option value="employee_benefit">Avantage employé</option>
-            </select>
+            <label className={labelCls}>Validité jusqu&apos;au</label>
+            <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className={inputCls} />
+            <p className="mt-1 text-xs text-foreground/50">Laisser vide = valable 1 an (carte à usage unique).</p>
           </div>
-        </div>
+        </Section>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Acheteur (nom)</label>
-            <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} className={inputCls} />
+        <Section title="Acheteur" hint="Reçoit l'email de confirmation si renseigné.">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Nom</label>
+              <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} className={inputCls} />
+            </div>
           </div>
-          <div>
-            <label className={labelCls}>Acheteur (email)</label>
-            <input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} className={inputCls} />
-          </div>
-        </div>
+        </Section>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Destinataire (nom)</label>
-            <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className={inputCls} />
+        <Section title="Destinataire" hint="Optionnel. Reçoit la carte par email si une adresse est renseignée.">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Nom</label>
+              <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className={inputCls} />
+            </div>
           </div>
           <div>
-            <label className={labelCls}>Destinataire (email)</label>
-            <input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className={inputCls} />
+            <label className={labelCls}>Message</label>
+            <input value={message} onChange={(e) => setMessage(e.target.value)} maxLength={200} className={inputCls} placeholder="Mot personnel (figure sur la carte)" />
           </div>
-        </div>
-
-        <div>
-          <label className={labelCls}>Message (optionnel)</label>
-          <input value={message} onChange={(e) => setMessage(e.target.value)} maxLength={200} className={inputCls} />
-        </div>
-
-        <div>
-          <label className={labelCls}>Expiration (optionnel)</label>
-          <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className={inputCls} />
-        </div>
+        </Section>
 
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -559,13 +566,18 @@ function DetailModal({
   onCancel: (id: string) => void
   onReactivate: (id: string) => void
 }) {
-  const pct = card.initialAmount > 0 ? Math.round((card.balance / card.initialAmount) * 100) : 0
   return (
     <Modal title={card.code} subtitle={`Créée le ${fmtDate(card.createdAt)} · ${card.source}`} onClose={onClose}>
       <div className="space-y-5">
-        {/* Solde */}
+        {/* Valeur + statut (carte à usage unique) */}
         <div className="rounded-xl bg-beige-light p-4">
-          <div className="flex items-end justify-between">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-foreground/45">Valeur</p>
+              <p className="mt-1 font-display text-4xl font-medium leading-none text-foreground">
+                {eur(card.initialAmount)}
+              </p>
+            </div>
             <span
               className={cn(
                 'rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
@@ -574,19 +586,10 @@ function DetailModal({
             >
               {STATUS_LABEL[card.status]}
             </span>
-            <span className="text-right">
-              <span className="font-display text-4xl font-medium leading-none text-foreground">
-                {eur(card.balance)}
-              </span>
-              <span className="ml-1 text-sm text-foreground/50">/ {eur(card.initialAmount)}</span>
-            </span>
           </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/10">
-            <div
-              className={cn('h-full rounded-full', card.status === 'active' ? 'bg-sauge' : 'bg-foreground/25')}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          <p className="mt-3 text-xs text-foreground/55">
+            Carte à usage unique{card.expiresAt ? ` · valable jusqu'au ${fmtDate(card.expiresAt)}` : ''}
+          </p>
         </div>
 
         {/* Infos */}
@@ -613,10 +616,6 @@ function DetailModal({
               <dd className="max-w-[60%] text-right text-foreground/80 italic">« {card.recipient.message} »</dd>
             </div>
           )}
-          <div className="flex justify-between gap-4">
-            <dt className="text-foreground/55">Expiration</dt>
-            <dd className="text-right text-foreground">{fmtDate(card.expiresAt)}</dd>
-          </div>
         </dl>
 
         {/* Historique */}
