@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  AlertTriangle,
   Ban,
   Gift,
   Loader2,
@@ -89,6 +90,16 @@ export default function AdminGiftCardsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [showRedeem, setShowRedeem] = useState(false)
   const [detail, setDetail] = useState<GiftCard | null>(null)
+  const [confirmState, setConfirmState] = useState<{
+    id: string
+    action: 'cancel' | 'reactivate'
+    tone: 'danger' | 'primary'
+    title: string
+    message: string
+    confirmLabel: string
+  } | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -128,30 +139,59 @@ export default function AdminGiftCardsPage() {
     }
   }, [cards])
 
-  // Action admin sur une carte (annuler / réactiver). Gère proprement les
-  // erreurs serveur ET réseau (« Failed to fetch » si le serveur est injoignable).
-  const patchCard = async (id: string, action: 'cancel' | 'reactivate', confirmMsg: string) => {
-    if (!confirm(confirmMsg)) return
+  // Confirmation via pop-up stylée (et non le confirm() natif du navigateur).
+  const cancelCard = (id: string) =>
+    setConfirmState({
+      id,
+      action: 'cancel',
+      tone: 'danger',
+      title: 'Annuler cette carte ?',
+      message:
+        'La carte ne sera plus utilisable. Si c’est une erreur, vous pourrez la réactiver ensuite depuis son détail.',
+      confirmLabel: 'Annuler la carte',
+    })
+
+  const reactivateCard = (id: string) =>
+    setConfirmState({
+      id,
+      action: 'reactivate',
+      tone: 'primary',
+      title: 'Réactiver cette carte ?',
+      message: 'La carte redeviendra immédiatement utilisable (carte à usage unique).',
+      confirmLabel: 'Réactiver',
+    })
+
+  // Exécute l'action confirmée. Gère erreurs serveur ET réseau (« Failed to fetch »).
+  const runConfirm = async () => {
+    if (!confirmState) return
+    setConfirmLoading(true)
+    setConfirmError(null)
     try {
-      const res = await fetch(`/api/gift-cards/${id}/${action}`, { method: 'PATCH', headers: authHeaders() })
+      const res = await fetch(`/api/gift-cards/${confirmState.id}/${confirmState.action}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+      })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Une erreur est survenue.')
+      setConfirmState(null)
       setDetail(null)
       load()
     } catch (err) {
-      const msg =
+      setConfirmError(
         err instanceof TypeError
           ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
           : (err as Error).message
-      alert(msg)
+      )
+    } finally {
+      setConfirmLoading(false)
     }
   }
 
-  const cancelCard = (id: string) =>
-    patchCard(id, 'cancel', 'Annuler cette carte ? Elle ne sera plus utilisable (réversible ensuite via « Réactiver »).')
-
-  const reactivateCard = (id: string) =>
-    patchCard(id, 'reactivate', 'Réactiver cette carte ? Elle redeviendra utilisable.')
+  const closeConfirm = () => {
+    if (confirmLoading) return
+    setConfirmState(null)
+    setConfirmError(null)
+  }
 
   return (
     <div className="min-h-screen bg-beige-light/50">
@@ -300,6 +340,89 @@ export default function AdminGiftCardsPage() {
           onReactivate={reactivateCard}
         />
       )}
+      {confirmState && (
+        <ConfirmDialog
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmLabel={confirmState.confirmLabel}
+          tone={confirmState.tone}
+          loading={confirmLoading}
+          error={confirmError}
+          onConfirm={runConfirm}
+          onClose={closeConfirm}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ---------- Pop-up de confirmation ---------- */
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  tone,
+  loading,
+  error,
+  onConfirm,
+  onClose,
+}: {
+  title: string
+  message: string
+  confirmLabel: string
+  tone: 'danger' | 'primary'
+  loading: boolean
+  error: string | null
+  onConfirm: () => void
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-navy/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-[var(--shadow-lg)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-4">
+          <span
+            className={cn(
+              'flex size-11 shrink-0 items-center justify-center rounded-full',
+              tone === 'danger' ? 'bg-red-50 text-red-600' : 'bg-sauge/15 text-sauge-deep'
+            )}
+          >
+            {tone === 'danger' ? <AlertTriangle className="size-5" /> : <RefreshCw className="size-5" />}
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-display text-2xl font-medium leading-tight text-foreground">{title}</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-foreground/65">{message}</p>
+          </div>
+        </div>
+
+        {error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+
+        <div className="mt-6 flex gap-2.5">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="h-10 flex-1 rounded-md border border-foreground/20 bg-white text-sm font-medium text-foreground transition-colors hover:bg-beige disabled:opacity-50"
+          >
+            Retour
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className={cn(
+              'inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-md text-sm font-medium text-white transition-colors disabled:opacity-50',
+              tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-sauge hover:bg-sauge-deep'
+            )}
+          >
+            {loading && <Loader2 className="size-4 animate-spin" />}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
