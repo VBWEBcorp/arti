@@ -2,15 +2,10 @@ import crypto from 'crypto'
 import mongoose from 'mongoose'
 
 import { connectDB } from '@/lib/db'
-import { GiftCard, GiftCardSettings, type IGiftCard, type GiftCardSource } from '@/models/GiftCard'
+import { GiftCard, type IGiftCard, type GiftCardSource } from '@/models/GiftCard'
 import { verifyGiftCardPayment } from '@/lib/stripe'
 import { sendEmail, type EmailAttachment } from '@/lib/resend'
 import { renderGiftCardPdf } from '@/lib/gift-card-pdf'
-import {
-  type GiftCardDesign,
-  GIFT_CARD_DESIGN_DEFAULT,
-  normalizeGiftCardDesign,
-} from '@/lib/gift-card-design'
 
 /** Erreur métier avec code HTTP (mappée par les API routes). */
 export class GiftCardError extends Error {
@@ -26,48 +21,6 @@ export class GiftCardError extends Error {
 export const GIFT_CARD_PRESETS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const
 export const MIN_AMOUNT = 5
 export const MAX_AMOUNT = 500
-
-/** Lit l'apparence (fond + réglages) de la carte cadeau. Renvoie le défaut si rien n'est défini. */
-export async function getGiftCardDesign(): Promise<GiftCardDesign> {
-  await connectDB()
-  const s = await GiftCardSettings.findOne().lean<{
-    backgroundUrl?: string | null
-    textColor?: 'light' | 'dark'
-    scrim?: number
-    heading?: string
-  }>()
-  if (!s) return { ...GIFT_CARD_DESIGN_DEFAULT }
-  return normalizeGiftCardDesign(s)
-}
-
-/**
- * Met à jour l'apparence (admin).
- * Champ `undefined` = inchangé ; pour `backgroundUrl`, `null` = retour au fond
- * par défaut. On part de l'existant et on n'applique que les champs fournis.
- */
-export async function updateGiftCardDesign(patch: Partial<GiftCardDesign>): Promise<GiftCardDesign> {
-  await connectDB()
-  const current = await GiftCardSettings.findOne()
-  const base = current ? normalizeGiftCardDesign(current.toObject()) : { ...GIFT_CARD_DESIGN_DEFAULT }
-
-  const merged: GiftCardDesign = { ...base }
-  if (patch.backgroundUrl !== undefined) merged.backgroundUrl = patch.backgroundUrl
-  if (patch.textColor !== undefined) merged.textColor = patch.textColor
-  if (patch.scrim !== undefined) merged.scrim = patch.scrim
-  if (patch.heading !== undefined) merged.heading = patch.heading
-  const next = normalizeGiftCardDesign(merged)
-
-  if (!current) {
-    await GiftCardSettings.create(next)
-  } else {
-    current.backgroundUrl = next.backgroundUrl
-    current.textColor = next.textColor
-    current.scrim = next.scrim
-    current.heading = next.heading
-    await current.save()
-  }
-  return next
-}
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

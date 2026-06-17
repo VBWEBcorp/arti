@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 
 import { GiftCardBalance } from '@/components/arti/gift-card-balance'
 import { GiftCardPurchase } from '@/components/arti/gift-card-purchase'
+import { GiftCardVisual } from '@/components/arti/gift-card-visual'
 import { InfoCards } from '@/components/arti/info-cards'
 
 export const metadata: Metadata = {
@@ -36,16 +36,7 @@ export default function CarteCadeauPage() {
         <div className="mx-auto grid max-w-6xl gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
           {/* Visuel */}
           <div>
-            <div className="relative aspect-square overflow-hidden bg-sauge">
-              <Image
-                src="/brand/cadeau-gift.png"
-                alt="Carte cadeau ARTI"
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 45vw"
-                className="object-cover"
-              />
-            </div>
+            <GiftCardVisual className="max-w-sm" />
             <p className="mt-6 text-xs font-medium uppercase tracking-[0.28em] text-sauge-deep">
               Carte cadeau
             </p>

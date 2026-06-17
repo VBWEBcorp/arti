@@ -1,136 +1,28 @@
 import Image from 'next/image'
 
-import {
-  type GiftCardDesign,
-  GIFT_CARD_DESIGN_DEFAULT,
-  hexToRgb,
-  isLightColor,
-} from '@/lib/gift-card-design'
 import { cn } from '@/lib/utils'
 
-type GiftCardVisualProps = {
-  amount: number
-  code: string
-  recipientName?: string
-  message?: string
-  design?: GiftCardDesign | null
-  className?: string
-}
-
-const eur = (n: number) =>
-  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
-
 /**
- * Rendu visuel d'une carte cadeau ARTI.
- *
- * Sans `design` (ou sans fond), affiche le visuel ARTI par défaut (sauge).
- * Avec un fond personnalisé, l'image sert d'arrière-plan et les champs
- * (montant, destinataire, message, code) sont rendus par-dessus, avec une
- * couleur de texte et un voile de lisibilité réglés par l'admin.
+ * Visuel officiel de la carte cadeau ARTI (recto illustré).
+ * Image unique de marque, identique partout (site + email/PDF). Le montant, le
+ * code et la date figurent sur le PDF reçu par email, pas sur cet aperçu.
  */
-export function GiftCardVisual({
-  amount,
-  code,
-  recipientName,
-  message,
-  design,
-  className,
-}: GiftCardVisualProps) {
-  const d = design || GIFT_CARD_DESIGN_DEFAULT
-  const hasBg = !!d.backgroundUrl
-  const lightText = isLightColor(d.textColor)
-
-  // Couleur d'encre adaptative (rgb depuis le hex) pour décliner les opacités.
-  const { r, g, b } = hexToRgb(d.textColor)
-  const ink = `${r}, ${g}, ${b}`
-  const c = {
-    full: { color: `rgb(${ink})` },
-    strong: { color: `rgba(${ink}, 0.9)` },
-    muted: { color: `rgba(${ink}, 0.8)` },
-    faint: { color: `rgba(${ink}, 0.7)` },
-  }
-
-  // Voile : assombrit (texte clair) ou éclaircit (texte foncé) le fond.
-  const scrimColor = lightText
-    ? `rgba(0, 0, 0, ${d.scrim / 100})`
-    : `rgba(255, 255, 255, ${d.scrim / 100})`
-
+export function GiftCardVisual({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'relative aspect-[1.6/1] w-full overflow-hidden rounded-xl shadow-xl',
-        !hasBg && 'bg-sauge',
+        'relative mx-auto w-full max-w-[320px] overflow-hidden rounded-xl shadow-[var(--shadow-md)] ring-1 ring-foreground/10',
         className
       )}
-      style={
-        hasBg
-          ? {
-              backgroundColor: '#7d8a6f',
-              backgroundImage: `url('${d.backgroundUrl}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }
-          : undefined
-      }
     >
-      {/* Motif décoratif (uniquement sur le fond ARTI par défaut) */}
-      {!hasBg && (
-        <>
-          <div aria-hidden className="absolute -right-10 -top-10 size-40 rounded-full bg-white/10" />
-          <div aria-hidden className="absolute -bottom-12 -left-8 size-32 rounded-full bg-white/10" />
-        </>
-      )}
-
-      {/* Voile de lisibilité sur fond personnalisé */}
-      {hasBg && d.scrim > 0 && (
-        <div aria-hidden className="absolute inset-0" style={{ backgroundColor: scrimColor }} />
-      )}
-
-      <div className="relative flex h-full flex-col justify-between p-6 sm:p-7">
-        <div className="flex items-start justify-between">
-          <div>
-            <Image
-              src="/brand/logo-arti.png"
-              alt="ARTI"
-              width={120}
-              height={48}
-              className={cn(
-                'h-8 w-auto object-contain',
-                lightText ? 'brightness-0 invert' : 'brightness-0'
-              )}
-            />
-            <p
-              className="mt-1 text-[11px] uppercase tracking-[0.22em]"
-              style={c.muted}
-            >
-              {d.heading || 'Carte cadeau'}
-            </p>
-          </div>
-          <span
-            className="font-display text-4xl font-medium leading-none sm:text-5xl"
-            style={c.full}
-          >
-            {eur(amount)}
-          </span>
-        </div>
-
-        <div>
-          {recipientName && (
-            <p className="text-sm" style={c.strong}>
-              <span style={c.faint}>Offert à </span>
-              {recipientName}
-            </p>
-          )}
-          {message && (
-            <p className="mt-1 line-clamp-2 text-xs italic" style={c.muted}>
-              « {message} »
-            </p>
-          )}
-          <p className="mt-3 font-mono text-lg font-semibold tracking-[0.18em]" style={c.full}>
-            {code}
-          </p>
-        </div>
-      </div>
+      <Image
+        src="/brand/carte-cadeau-recto.png"
+        alt="Carte cadeau ARTI"
+        width={894}
+        height={1276}
+        className="h-auto w-full"
+        sizes="(max-width: 640px) 80vw, 320px"
+      />
     </div>
   )
 }

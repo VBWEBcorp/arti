@@ -121,31 +121,3 @@ GiftCardSchema.index(
 
 export const GiftCard =
   mongoose.models.GiftCard || mongoose.model<IGiftCard>('GiftCard', GiftCardSchema)
-
-// ============================================================================
-//  Apparence de la carte cadeau — réglages globaux (un seul document)
-// ============================================================================
-
-export interface IGiftCardSettings extends Document {
-  backgroundUrl: string | null
-  textColor: string
-  scrim: number
-  heading: string
-  updatedAt: Date
-}
-
-const GiftCardSettingsSchema = new Schema<IGiftCardSettings>(
-  {
-    backgroundUrl: { type: String, default: null },
-    // Couleur du texte en hex (#rrggbb). Les anciennes valeurs light/dark sont
-    // mappées à la lecture par normalizeGiftCardDesign.
-    textColor: { type: String, default: '#ffffff' },
-    scrim: { type: Number, default: 0, min: 0, max: 80 },
-    heading: { type: String, default: 'Carte cadeau' },
-  },
-  { timestamps: true }
-)
-
-export const GiftCardSettings =
-  mongoose.models.GiftCardSettings ||
-  mongoose.model<IGiftCardSettings>('GiftCardSettings', GiftCardSettingsSchema)

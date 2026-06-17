@@ -15,7 +15,6 @@ import { useEffect, useState } from 'react'
 
 import { GiftCardVisual } from '@/components/arti/gift-card-visual'
 import { StripePaymentForm } from '@/components/arti/stripe-payment-form'
-import { type GiftCardDesign, GIFT_CARD_DESIGN_DEFAULT } from '@/lib/gift-card-design'
 import { cn } from '@/lib/utils'
 
 const eur = (n: number) =>
@@ -28,7 +27,6 @@ type Config = {
   max: number
   stripeConfigured: boolean
   stripePublishableKey: string
-  design: GiftCardDesign
 }
 type PurchaseResult = {
   id: string
@@ -44,7 +42,6 @@ const FALLBACK: Config = {
   max: 100,
   stripeConfigured: false,
   stripePublishableKey: '',
-  design: GIFT_CARD_DESIGN_DEFAULT,
 }
 
 export function GiftCardPurchase() {
@@ -163,13 +160,7 @@ export function GiftCardPurchase() {
         </p>
 
         <div className="mt-8">
-          <GiftCardVisual
-            amount={result.amount}
-            code={result.code}
-            recipientName={result.recipient?.name}
-            message={result.recipient?.message}
-            design={config.design}
-          />
+          <GiftCardVisual />
         </div>
 
         <div className="mt-6 border border-foreground/10 bg-beige-light p-5">

@@ -5,21 +5,17 @@ import { useRouter } from 'next/navigation'
 import {
   Ban,
   Gift,
-  ImageUp,
   Loader2,
-  Palette,
   Plus,
   RefreshCw,
   ScanLine,
   Search,
   Sparkles,
-  Trash2,
   Wallet,
   X,
 } from 'lucide-react'
 
 import { GiftCardVisual } from '@/components/arti/gift-card-visual'
-import { type GiftCardDesign, GIFT_CARD_DESIGN_DEFAULT } from '@/lib/gift-card-design'
 import { cn } from '@/lib/utils'
 
 const eur = (n: number) =>
@@ -84,21 +80,6 @@ function authHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }
 
-/** Upload une image vers /api/upload (admin). Renvoie l'URL + la luminosité. Lève en cas d'échec. */
-async function uploadImage(file: File): Promise<{ url: string; isDark: boolean | null }> {
-  const token = localStorage.getItem('authToken')
-  const fd = new FormData()
-  fd.append('file', file)
-  const res = await fetch('/api/upload', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || "Échec de l'upload")
-  return { url: data.url as string, isDark: (data.isDark ?? null) as boolean | null }
-}
-
 export default function AdminGiftCardsPage() {
   const router = useRouter()
   const [cards, setCards] = useState<GiftCard[]>([])
@@ -107,7 +88,6 @@ export default function AdminGiftCardsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [showRedeem, setShowRedeem] = useState(false)
-  const [showDesign, setShowDesign] = useState(false)
   const [detail, setDetail] = useState<GiftCard | null>(null)
 
   const load = useCallback(async () => {
@@ -177,9 +157,6 @@ export default function AdminGiftCardsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowDesign(true)} className={btnOutline}>
-              <Palette className="size-4" /> Apparence
-            </button>
             <button onClick={() => setShowRedeem(true)} className={btnOutline}>
               <ScanLine className="size-4" /> Utiliser
             </button>
@@ -313,7 +290,6 @@ export default function AdminGiftCardsPage() {
         <CreateModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); load() }} />
       )}
       {showRedeem && <RedeemModal onClose={() => setShowRedeem(false)} onDone={load} />}
-      {showDesign && <DesignModal onClose={() => setShowDesign(false)} />}
       {detail && <DetailModal card={detail} onClose={() => setDetail(null)} onCancel={cancelCard} />}
     </div>
   )
@@ -391,38 +367,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [recipientEmail, setRecipientEmail] = useState('')
   const [message, setMessage] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
-  const [bgUrl, setBgUrl] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [globalDesign, setGlobalDesign] = useState<GiftCardDesign>(GIFT_CARD_DESIGN_DEFAULT)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Style global (couleur/voile/titre) repris dans l'aperçu ; seul le fond est
-  // surchargeable par carte.
-  useEffect(() => {
-    fetch('/api/gift-cards/settings')
-      .then((r) => r.json())
-      .then((d: GiftCardDesign) => setGlobalDesign({ ...GIFT_CARD_DESIGN_DEFAULT, ...d }))
-      .catch(() => {})
-  }, [])
-
-  const previewDesign: GiftCardDesign = {
-    ...globalDesign,
-    backgroundUrl: bgUrl || globalDesign.backgroundUrl,
-  }
-
-  const onUploadBg = async (file: File) => {
-    setUploading(true)
-    setError(null)
-    try {
-      const { url } = await uploadImage(file)
-      setBgUrl(url)
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setUploading(false)
-    }
-  }
 
   const submit = async () => {
     setSaving(true)
@@ -436,7 +382,6 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           source: source === 'admin' ? undefined : source,
           purchasedBy: { name: buyerName || undefined, email: buyerEmail || undefined },
           recipient: { name: recipientName || undefined, email: recipientEmail || undefined, message: message || undefined },
-          imageUrl: bgUrl || undefined,
           expiresAt: expiresAt || undefined,
         }),
       })
@@ -453,45 +398,12 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   return (
     <Modal title="Nouvelle carte" subtitle="Création manuelle (sans paiement en ligne)" onClose={onClose}>
       <div className="space-y-4">
-        {/* Aperçu de la carte */}
+        {/* Aperçu de la carte (visuel de marque) */}
         <div>
           <label className={labelCls}>Aperçu</label>
-          <GiftCardVisual
-            amount={Number(amount) || 0}
-            code="GC-XXXX-XXXX"
-            recipientName={recipientName || undefined}
-            message={message || undefined}
-            design={previewDesign}
-          />
-        </div>
-
-        {/* Fond propre à cette carte */}
-        <div>
-          <label className={labelCls}>Fond de cette carte (optionnel)</label>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className={cn(btnOutline, 'cursor-pointer')}>
-              {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImageUp className="size-4" />}
-              {bgUrl ? 'Remplacer' : 'Choisir une image'}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) onUploadBg(f)
-                  e.target.value = ''
-                }}
-              />
-            </label>
-            {bgUrl && (
-              <button type="button" onClick={() => setBgUrl(null)} className={cn(btnOutline, 'text-red-600')}>
-                <Trash2 className="size-4" /> Retirer
-              </button>
-            )}
-          </div>
+          <GiftCardVisual />
           <p className="mt-1.5 text-xs text-foreground/50">
-            Sans image, le fond global s&apos;applique. La couleur du texte et le voile suivent le modèle global (réglables via « Apparence »).
+            Le numéro, le montant et la date de validité sont remplis sur le PDF envoyé par email.
           </p>
         </div>
 
@@ -616,210 +528,6 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
           Débiter la carte
         </button>
       </div>
-    </Modal>
-  )
-}
-
-/* ---------- Apparence de la carte ---------- */
-function DesignModal({ onClose }: { onClose: () => void }) {
-  const [design, setDesign] = useState<GiftCardDesign>(GIFT_CARD_DESIGN_DEFAULT)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    fetch('/api/gift-cards/settings')
-      .then((r) => r.json())
-      .then((d: GiftCardDesign) => setDesign({ ...GIFT_CARD_DESIGN_DEFAULT, ...d }))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  const patch = (p: Partial<GiftCardDesign>) => {
-    setDesign((d) => ({ ...d, ...p }))
-    setSaved(false)
-  }
-
-  const onUpload = async (file: File) => {
-    setUploading(true)
-    setError(null)
-    try {
-      const { url, isDark } = await uploadImage(file)
-      // Auto-contraste : image sombre -> texte blanc ; image claire -> texte foncé.
-      // L'admin peut toujours ajuster ensuite avec le sélecteur de couleur.
-      patch({
-        backgroundUrl: url,
-        ...(isDark !== null ? { textColor: isDark ? '#ffffff' : '#1f2421' } : {}),
-      })
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const save = async () => {
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/gift-cards/settings', {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify(design),
-      })
-      if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.error || 'Erreur')
-      }
-      setSaved(true)
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Modal title="Apparence" subtitle="Le fond et le style de toutes les cartes cadeaux" onClose={onClose}>
-      {loading ? (
-        <div className="flex items-center justify-center gap-2 py-12 text-sm text-foreground/60">
-          <Loader2 className="size-4 animate-spin" /> Chargement…
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {/* Aperçu live */}
-          <div>
-            <label className={labelCls}>Aperçu</label>
-            <GiftCardVisual
-              amount={50}
-              code="GC-XXXX-XXXX"
-              recipientName="Léa"
-              message="Joyeux anniversaire !"
-              design={design}
-            />
-          </div>
-
-          {/* Fond */}
-          <div>
-            <label className={labelCls}>Image de fond</label>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className={cn(btnOutline, 'cursor-pointer')}>
-                {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImageUp className="size-4" />}
-                {design.backgroundUrl ? 'Remplacer' : 'Choisir une image'}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  disabled={uploading}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) onUpload(f)
-                    e.target.value = ''
-                  }}
-                />
-              </label>
-              {design.backgroundUrl && (
-                <button
-                  type="button"
-                  onClick={() => patch({ backgroundUrl: null })}
-                  className={cn(btnOutline, 'text-red-600')}
-                >
-                  <Trash2 className="size-4" /> Retirer
-                </button>
-              )}
-            </div>
-            <p className="mt-1.5 text-xs text-foreground/50">
-              PNG, JPG ou WebP. Format paysage conseillé (ratio ~1.6/1). Sans image, le fond ARTI par défaut s'applique.
-            </p>
-          </div>
-
-          {/* Titre */}
-          <div>
-            <label className={labelCls}>Titre sur la carte</label>
-            <input
-              value={design.heading}
-              onChange={(e) => patch({ heading: e.target.value })}
-              maxLength={60}
-              placeholder="Carte cadeau"
-              className={inputCls}
-            />
-          </div>
-
-          {/* Couleur du texte */}
-          <div>
-            <label className={labelCls}>Couleur du texte</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={design.textColor}
-                onChange={(e) => patch({ textColor: e.target.value })}
-                className="h-10 w-14 cursor-pointer rounded-md border border-foreground/15 bg-white p-1"
-                aria-label="Couleur du texte"
-              />
-              <input
-                type="text"
-                value={design.textColor}
-                onChange={(e) => patch({ textColor: e.target.value })}
-                placeholder="#ffffff"
-                className={cn(inputCls, 'w-28 font-mono uppercase')}
-              />
-              <div className="flex gap-1.5">
-                {[
-                  { hex: '#ffffff', label: 'Blanc' },
-                  { hex: '#1f2421', label: 'Noir' },
-                  { hex: '#7d8a6f', label: 'Sauge' },
-                ].map((s) => (
-                  <button
-                    key={s.hex}
-                    type="button"
-                    title={s.label}
-                    onClick={() => patch({ textColor: s.hex })}
-                    className={cn(
-                      'size-8 rounded-full border transition-transform hover:scale-110',
-                      design.textColor.toLowerCase() === s.hex ? 'border-sauge ring-2 ring-sauge' : 'border-foreground/20'
-                    )}
-                    style={{ backgroundColor: s.hex }}
-                  />
-                ))}
-              </div>
-            </div>
-            <p className="mt-1.5 text-xs text-foreground/50">
-              Réglée automatiquement à l&apos;upload (blanc si l&apos;image est sombre, foncé si elle est claire) — tu peux l&apos;ajuster ici. Le logo s&apos;adapte aussi.
-            </p>
-          </div>
-
-          {/* Voile de lisibilité */}
-          <div>
-            <label className={labelCls}>Voile de lisibilité — {design.scrim}%</label>
-            <input
-              type="range"
-              min={0}
-              max={80}
-              step={5}
-              value={design.scrim}
-              onChange={(e) => patch({ scrim: Number(e.target.value) })}
-              className="w-full accent-sauge"
-            />
-            <p className="mt-1 text-xs text-foreground/50">
-              Renforce le contraste du texte sur les fonds chargés (photos).
-            </p>
-          </div>
-
-          {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-          {saved && (
-            <p className="rounded-md bg-sauge/15 px-3 py-2 text-sm text-sauge-deep">
-              Apparence enregistrée. Elle s'applique à toutes les cartes (site et emails).
-            </p>
-          )}
-
-          <button onClick={save} disabled={saving || uploading} className={cn(btnPrimary, 'w-full')}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <Palette className="size-4" />}
-            Enregistrer l&apos;apparence
-          </button>
-        </div>
-      )}
     </Modal>
   )
 }
