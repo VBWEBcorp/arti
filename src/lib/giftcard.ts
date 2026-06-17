@@ -418,6 +418,7 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
       amount: giftCard.initialAmount,
       expiresAt: giftCard.expiresAt,
       recipientName: giftCard.recipient?.name,
+      message: giftCard.recipient?.message,
     })
     attachments = [
       {
