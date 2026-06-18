@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
   Ban,
+  Download,
+  Eye,
   Gift,
   Loader2,
   Plus,
@@ -723,6 +725,48 @@ function DetailModal({
   onCancel: (id: string) => void
   onReactivate: (id: string) => void
 }) {
+  const [pdfBusy, setPdfBusy] = useState<'preview' | 'download' | null>(null)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+
+  // Le PDF est protégé par le token admin (en-tête Authorization) : on le
+  // récupère donc en fetch puis on l'ouvre/télécharge via une URL blob, plutôt
+  // qu'avec un simple lien (qui ne porterait pas le token).
+  const openPdf = async (mode: 'preview' | 'download') => {
+    setPdfBusy(mode)
+    setPdfError(null)
+    // Aperçu : on ouvre l'onglet tout de suite (geste utilisateur) pour éviter
+    // le blocage des pop-ups, puis on y charge le blob une fois prêt.
+    const win = mode === 'preview' ? window.open('', '_blank') : null
+    try {
+      const res = await fetch(
+        `/api/gift-cards/${card._id}/pdf${mode === 'download' ? '?download=1' : ''}`,
+        { headers: authHeaders() }
+      )
+      if (!res.ok) throw new Error('Génération du PDF impossible.')
+      const url = URL.createObjectURL(await res.blob())
+      if (mode === 'preview' && win) {
+        win.location.href = url
+      } else {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `carte-cadeau-${card.code}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (err) {
+      if (win) win.close()
+      setPdfError(
+        err instanceof TypeError
+          ? 'Connexion au serveur impossible. Réessayez.'
+          : (err as Error).message
+      )
+    } finally {
+      setPdfBusy(null)
+    }
+  }
+
   return (
     <Modal title={card.code} subtitle={`Créée le ${fmtDate(card.createdAt)} · ${card.source}`} onClose={onClose}>
       <div className="space-y-5">
@@ -791,6 +835,24 @@ function DetailModal({
             </div>
           </div>
         )}
+
+        {/* PDF de la carte (le même que celui envoyé par email) */}
+        <div>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground/55">
+            Carte PDF
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button onClick={() => openPdf('preview')} disabled={!!pdfBusy} className={cn(btnOutline, 'w-full')}>
+              {pdfBusy === 'preview' ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+              Aperçu
+            </button>
+            <button onClick={() => openPdf('download')} disabled={!!pdfBusy} className={cn(btnOutline, 'w-full')}>
+              {pdfBusy === 'download' ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              Télécharger
+            </button>
+          </div>
+          {pdfError && <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{pdfError}</p>}
+        </div>
 
         {card.status === 'cancelled' ? (
           <button onClick={() => onReactivate(card._id)} className={cn(btnPrimary, 'w-full')}>
