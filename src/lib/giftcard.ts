@@ -238,7 +238,7 @@ export async function redeemOnSite(
         },
       },
     },
-    { new: true }
+    { returnDocument: 'after' }
   )
 
   if (!giftCard) throw new GiftCardError('Cette carte cadeau vient d\'être utilisée')
