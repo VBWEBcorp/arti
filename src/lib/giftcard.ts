@@ -370,40 +370,80 @@ function giftCardEmailHtml(opts: {
 }): string {
   const { title, intro, giftCard } = opts
 
-  // La carte est jointe à l'email en image (PNG, fond + texte + code gravés).
-  // On ne l'affiche pas dans le corps : Gmail ne rend pas les images inline CID
-  // (icône cassée). Le corps reste donc en texte (toujours lisible, dark mode
-  // compris) et la jolie carte est en pièce jointe téléchargeable.
+  // Email en tableaux (robuste sur tous les clients, Outlook compris) et sans
+  // image externe (fragile en mail). La carte illustrée reste en pièce jointe PDF.
+  const validity = giftCard.expiresAt ? ` &middot; valable jusqu'au ${frDate(giftCard.expiresAt)}` : ''
+  const year = new Date().getFullYear()
+  const messageBlock = giftCard.recipient?.message
+    ? `<tr><td style="padding:22px 32px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td width="3" style="width:3px;background:#7d8a6f;"></td>
+          <td style="padding:2px 0 2px 16px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;line-height:1.6;color:#5a5f5b;">&laquo;&nbsp;${escapeHtml(giftCard.recipient.message)}&nbsp;&raquo;</td>
+        </tr></table>
+      </td></tr>`
+    : ''
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
-<style>:root{color-scheme:light dark;supported-color-schemes:light dark;}</style>
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
 </head>
-<body style="margin:0;padding:0;background:#f6f5f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:560px;margin:0 auto;background:#ffffff;">
-    <div style="padding:32px 28px 16px;text-align:center;border-bottom:1px solid #f0eee9;">
-      <h1 style="margin:0;font-size:20px;color:#1f2421;">ARTI</h1>
-    </div>
-    <div style="padding:28px;color:#3a3f3b;font-size:15px;line-height:1.7;">
-      <h2 style="margin:0 0 14px;font-size:22px;color:#1f2421;">${title}</h2>
-      <p style="margin:0 0 18px;">${intro}</p>
-      <div style="border:1px solid #e6e3dc;border-radius:12px;padding:16px;text-align:center;background:#faf9f6;">
-        <p style="margin:0 0 4px;font-size:13px;color:#8a8f88;text-transform:uppercase;letter-spacing:.08em;">Code de la carte</p>
-        <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:.1em;color:#1f2421;font-family:monospace;">${giftCard.code}</p>
-        <p style="margin:8px 0 0;font-size:14px;color:#3a3f3b;">Montant : <strong>${eur(giftCard.initialAmount)}</strong></p>
-        <p style="margin:6px 0 0;font-size:13px;color:#8a8f88;">Carte à usage unique${giftCard.expiresAt ? ` · valable jusqu'au ${frDate(giftCard.expiresAt)}` : ''}</p>
-      </div>
-      ${giftCard.recipient?.message ? `<p style="margin:18px 0 0;font-style:italic;color:#5a5f5b;">« ${escapeHtml(giftCard.recipient.message)} »</p>` : ''}
-    </div>
-    <div style="padding:22px 28px;text-align:center;border-top:1px solid #f0eee9;color:#a7aaa4;font-size:12px;">
-      <p style="margin:0;">&copy; ${new Date().getFullYear()} ARTI. Tous droits réservés.</p>
-    </div>
-  </div>
+<body style="margin:0;padding:0;background:#f1efe9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1efe9;">
+    <tr><td align="center" style="padding:28px 14px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;">
+
+        <!-- En-tête -->
+        <tr><td style="background:#7d8a6f;padding:34px 28px;text-align:center;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:36px;line-height:1;letter-spacing:9px;color:#ffffff;">ARTI</div>
+          <div style="margin-top:10px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e7ece1;">Carte cadeau &middot; Café céramique</div>
+        </td></tr>
+
+        <!-- Intro -->
+        <tr><td style="padding:34px 32px 4px;">
+          <h1 style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:25px;line-height:1.25;color:#1f2421;">${title}</h1>
+          <p style="margin:0;font-size:15px;line-height:1.7;color:#4a4f4a;">${intro}</p>
+        </td></tr>
+
+        <!-- Voucher -->
+        <tr><td style="padding:24px 32px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf9f6;border:1px solid #e6e3dc;border-radius:14px;">
+            <tr><td style="padding:26px 24px;text-align:center;">
+              <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#9a9f96;">Code de la carte</div>
+              <div style="margin-top:9px;font-family:'Courier New',Courier,monospace;font-size:25px;font-weight:700;letter-spacing:3px;color:#1f2421;">${giftCard.code}</div>
+              <div style="margin:18px auto;height:1px;width:54px;background:#e0ddd4;line-height:1px;font-size:0;">&nbsp;</div>
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1;color:#5f6b53;">${eur(giftCard.initialAmount)}</div>
+              <div style="margin-top:12px;font-size:12px;color:#9a9f96;">Carte à usage unique${validity}</div>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        ${messageBlock}
+
+        <!-- Mode d'emploi -->
+        <tr><td style="padding:24px 32px 4px;">
+          <p style="margin:0;font-size:13px;line-height:1.7;color:#7a7f78;">
+            La carte complète est jointe à cet email au format PDF. Présentez ce code lors de votre venue à l'atelier ARTI.
+          </p>
+        </td></tr>
+
+        <!-- Pied de page -->
+        <tr><td style="padding:26px 32px 32px;">
+          <div style="border-top:1px solid #f0eee9;padding-top:20px;text-align:center;">
+            <div style="font-size:12px;line-height:1.7;color:#a7aaa4;">
+              ARTI &middot; Café céramique<br>
+              10 r. Poullain Duparc, 35000 Rennes &middot; hello@articafeceramique.fr
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:#c2c4bf;">&copy; ${year} ARTI. Tous droits réservés.</div>
+          </div>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`
 }
@@ -461,7 +501,7 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
       subject: `${giftCard.purchasedBy?.name || 'Quelqu\'un'} vous offre une carte cadeau ARTI`,
       html: giftCardEmailHtml({
         title: 'Vous avez reçu une carte cadeau !',
-        intro: `${giftCard.purchasedBy?.name || 'Une personne'} vous offre une carte cadeau ARTI d'un montant de ${eur(giftCard.initialAmount)}. Votre carte (numéro et date de validité) est en pièce jointe au format PDF.`,
+        intro: `${escapeHtml(giftCard.purchasedBy?.name || 'Une personne')} vous offre une carte cadeau ARTI d'un montant de ${eur(giftCard.initialAmount)}. Votre carte (numéro et date de validité) est en pièce jointe au format PDF.`,
         giftCard,
       }),
       attachments,
