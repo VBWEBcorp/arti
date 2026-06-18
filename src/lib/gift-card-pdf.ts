@@ -63,7 +63,10 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
 const RULE_VALEUR = 297.3
 const RULE_ATTENTION = 251.0
 const RULE_VALABLE = 205.8
-const RULES_MESSAGE = [169.8, 158.8, 147.5, 136.0, 124.8]
+// Les 5 lignes « Message » sont reglees a ~9,7 pt d'ecart : valeurs relevees au
+// pixel pres sur le masque du modele, pour que chaque ligne de texte se pose
+// exactement sur son trait (sinon le texte derive vers le bas a chaque ligne).
+const RULES_MESSAGE = [175.4, 165.9, 156.2, 146.5, 136.7]
 
 /**
  * Remplit le verso du visuel officiel (numero, montant, destinataire, date de
@@ -113,7 +116,7 @@ export async function renderGiftCardPdf(card: {
   // les lignes (comme une note manuscrite). Italique, tronque a 5 lignes.
   const rawMsg = card.message ? pdfSafe(card.message).replace(/\s+/g, ' ').trim() : ''
   if (rawMsg) {
-    const size = 10
+    const size = 9.5
     const left = 40
     const maxWidth = width - left * 2 // marges symetriques
     const max = RULES_MESSAGE.length
@@ -125,7 +128,7 @@ export async function renderGiftCardPdf(card: {
       lines[max - 1] = `${last.replace(/\s+$/, '')}…`
     }
     lines.forEach((line, i) => {
-      verso.drawText(line, { x: left, y: RULES_MESSAGE[i] + 2.5, size, font: italic, color: ink })
+      verso.drawText(line, { x: left, y: RULES_MESSAGE[i] + 2, size, font: italic, color: ink })
     })
   }
 
