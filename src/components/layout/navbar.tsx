@@ -29,7 +29,25 @@ const links: NavLink[] = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false)
+  const [blogEnabled, setBlogEnabled] = useState(false)
   const pathname = usePathname()
+
+  // Le lien « Blog » n'apparaît que si le blog est activé côté admin
+  // (« Visible sur le site »). Réponse mise en cache, donc peu coûteuse.
+  useEffect(() => {
+    let alive = true
+    fetch('/api/blog/settings')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => {
+        if (alive && s && s.enabled !== false) setBlogEnabled(true)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const navLinks = blogEnabled ? [...links, { to: '/blog', label: 'Blog' }] : links
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -120,7 +138,7 @@ export function Navbar() {
               className="absolute left-4 top-full z-50 w-[280px] origin-top-left bg-beige-light shadow-[0_18px_40px_-12px_rgba(27,46,74,0.18)] ring-1 ring-foreground/[0.04] sm:left-8 lg:left-12"
             >
               <ul className="flex flex-col py-2">
-                {links.map((l) => {
+                {navLinks.map((l) => {
                   const isActive = pathname === l.to
                   return (
                     <li key={l.to}>
