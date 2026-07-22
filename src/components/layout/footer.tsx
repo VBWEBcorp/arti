@@ -9,7 +9,8 @@ const navLinks = [
   { label: 'Le concept', to: '/le-concept' },
   { label: 'La carte', to: '/carte' },
   { label: 'Les céramiques', to: '/arti-ceramiques' },
-  { label: 'Kit à emporter', to: '/kit-a-emporter' },
+  // Kit à emporter masqué du footer (front) pour le moment — page conservée, accessible par URL.
+  // { label: 'Kit à emporter', to: '/kit-a-emporter' },
   { label: 'Infos pratiques', to: '/infos-pratiques' },
   { label: 'Cartes cadeaux', to: '/arti-cadeaux' },
   { label: 'Réserver', to: '/infos-pratiques#reserver' },

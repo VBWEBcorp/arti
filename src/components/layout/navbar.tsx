@@ -20,7 +20,8 @@ const links: NavLink[] = [
   { to: '/le-concept', label: 'Le concept' },
   { to: '/carte', label: 'La carte' },
   { to: '/arti-ceramiques', label: 'Les céramiques' },
-  { to: '/kit-a-emporter', label: 'Kit à emporter' },
+  // Kit à emporter masqué du menu (front) pour le moment — la page reste accessible par URL.
+  // { to: '/kit-a-emporter', label: 'Kit à emporter' },
   { to: '/peinture-sur-ceramique-a-rennes', label: 'Groupe & Evènement' },
   { to: '/infos-pratiques', label: 'Infos pratiques' },
   { to: '/arti-cadeaux', label: 'Cartes cadeaux' },
@@ -105,10 +106,10 @@ export function Navbar() {
           <Logo size="lg" />
         </div>
 
-        {/* CTA Réserver à droite */}
+        {/* CTA Réserver à droite — lettrage serif fin (façon logo ARTI), en vert */}
         <Link
           href="/infos-pratiques#reserver"
-          className="inline-flex h-10 items-center justify-center rounded-sm border border-foreground/80 bg-transparent px-5 text-sm font-light tracking-wide text-foreground transition-colors hover:bg-foreground hover:text-beige"
+          className="font-serif inline-flex h-10 items-center justify-center rounded-sm border border-sauge bg-sauge px-6 text-base font-normal uppercase tracking-[0.16em] text-white transition-colors hover:border-sauge-deep hover:bg-sauge-deep"
         >
           Réserver
         </Link>
