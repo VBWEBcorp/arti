@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import Image from 'next/image'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import type { Ceramic } from '@/lib/content-defaults'
 import { cn } from '@/lib/utils'
@@ -21,13 +21,32 @@ function photosOf(c: Ceramic): string[] {
 function CeramicCard({ c }: { c: Ceramic }) {
   const photos = photosOf(c)
   const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
   const count = photos.length
   const current = count ? ((index % count) + count) % count : 0
   const go = (dir: number) => setIndex((i) => i + dir)
 
+  // Défilement automatique quand la pièce a plusieurs photos.
+  // En pause au survol ; désactivé si l'utilisateur préfère peu d'animations.
+  useEffect(() => {
+    if (count <= 1 || paused) return
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return
+    }
+    const id = setInterval(() => setIndex((i) => i + 1), 3500)
+    return () => clearInterval(id)
+  }, [count, paused])
+
   return (
     <article className="group flex flex-col">
-      <div className="relative aspect-[3/4] overflow-hidden bg-white shadow-sm">
+      <div
+        className="relative aspect-[3/4] overflow-hidden bg-white shadow-sm"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
         {count > 0 ? (
           <>
             {/* Piste qui défile horizontalement */}
