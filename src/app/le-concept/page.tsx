@@ -3,6 +3,8 @@ import Image from 'next/image'
 
 import { ArtiButton } from '@/components/arti/arti-button'
 import { ConceptCarousel } from '@/components/arti/concept-carousel'
+import { leConceptDefaults } from '@/lib/content-defaults'
+import { getPageContent } from '@/lib/page-content'
 
 export const metadata: Metadata = {
   title: 'Le concept',
@@ -11,38 +13,11 @@ export const metadata: Metadata = {
   alternates: { canonical: '/le-concept' },
 }
 
-const steps = [
-  {
-    n: '1',
-    title: 'Choisissez',
-    icon: '/brand/tasse-icone.png',
-    body:
-      "En arrivant, l'équipe d'Arti prendra quelques minutes pour vous donner toutes les explications nécessaires sur la peinture, les techniques et le matériel puis c'est parti ! Vous pourrez choisir la céramique de votre choix parmi une large sélection de pièces : bol, tasse, vase, assiette, coquetier…",
-  },
-  {
-    n: '2',
-    title: 'Décorez',
-    icon: '/brand/pot-icone.png',
-    body:
-      "A vos pinceaux ! Choisissez vos couleurs et laissez libre court à votre créativité. Si les idées venaient à vous manquer, un carnet d'inspiration sera à votre disposition pour vous permettre de réaliser les plus jolies des créations.",
-  },
-  {
-    n: '3',
-    title: 'Patientez',
-    icon: '/brand/verre-icone.png',
-    body:
-      "A la fin de votre atelier, nous récupérons votre pièce afin de l'émailler et la cuire dans notre four à haute température (1 000°C). Cela révèlera les couleurs et la rendra étanche !",
-  },
-  {
-    n: '4',
-    title: 'Récupérez',
-    icon: '/brand/potettasse-icone.png',
-    body:
-      'Environ 3 semaines plus tard, vous pourrez passer au café pour découvrir et récupérer votre création.',
-  },
-] as const
+export const dynamic = 'force-dynamic'
 
-export default function LeConceptPage() {
+export default async function LeConceptPage() {
+  const c = await getPageContent('le-concept', leConceptDefaults)
+
   return (
     <>
       {/* HERO */}
@@ -53,7 +28,7 @@ export default function LeConceptPage() {
           <div className="relative bg-sauge px-6 py-14 sm:px-12 sm:py-16 md:py-20 md:pb-48">
             <div className="relative mx-auto max-w-[440px] pb-36 md:mx-0 md:ml-auto md:pb-0">
               <Image
-                src="/brand/concept-etagere.png"
+                src={c.hero.image}
                 alt="Étagère de céramiques chez ARTI"
                 width={800}
                 height={800}
@@ -63,7 +38,7 @@ export default function LeConceptPage() {
               {/* Devanture, décalée vers le bas-gauche */}
               <div className="absolute -bottom-24 left-2 h-44 w-56 overflow-hidden shadow-lg md:-bottom-60 md:-left-56 md:h-64 md:w-80">
                 <Image
-                  src="/brand/concept-devanture.png"
+                  src={c.hero.imageSecondary}
                   alt="Devanture du café ARTI à Rennes"
                   fill
                   sizes="(max-width: 768px) 224px, 320px"
@@ -77,23 +52,15 @@ export default function LeConceptPage() {
           <div className="flex items-center bg-white px-6 py-16 sm:px-12 md:py-28 lg:pl-24 lg:pr-20">
             <div className="max-w-[620px]">
               <h1 className="font-display text-5xl font-medium leading-[1.12] text-foreground sm:text-[3.4rem]">
-                Arti est un coffee shop et un atelier de peinture sur céramique.
+                {c.hero.title}
               </h1>
               <div className="mt-6 space-y-4 text-sm leading-relaxed text-foreground/85">
-                <p>
-                  Vous retrouverez chez ARTI, une jolie sélection de cafés, thés
-                  et boissons fraîches ainsi que des gâteaux pour les
-                  gourmands&nbsp;!
-                </p>
-                <p>
-                  Notre café est torréfié en Bretagne, à Saint-Thuriau, par
-                  Café&nbsp;1802. Nous avons à cœur de travailler avec des
-                  produits locaux.
-                </p>
+                <p>{c.hero.paragraph1}</p>
+                <p>{c.hero.paragraph2}</p>
               </div>
               <div className="mt-8">
-                <ArtiButton href="/carte" variant="sauge">
-                  Voir la carte
+                <ArtiButton href={c.hero.buttonHref} variant="sauge">
+                  {c.hero.buttonLabel}
                 </ArtiButton>
               </div>
             </div>
@@ -105,19 +72,17 @@ export default function LeConceptPage() {
       <section className="bg-white pt-24 sm:pt-32">
         <div className="mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
           <Image
-            src="/brand/vase-icone.png"
+            src={c.intro.icon}
             alt="Vase ARTI"
             width={180}
             height={180}
             className="h-28 w-auto object-contain sm:h-32"
           />
           <h2 className="mt-8 font-display text-4xl font-medium leading-[1.05] text-neutral-700 sm:text-5xl lg:text-6xl">
-            Vous souhaitez découvrir la peinture sur céramique ?
+            {c.intro.title}
           </h2>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-neutral-600">
-            Arti vous propose un moment hors du temps, 2H30 d&apos;atelier, pour
-            personnaliser la pièce en céramique de votre choix. Comment cela
-            fonctionne&nbsp;?
+            {c.intro.text}
           </p>
         </div>
       </section>
@@ -126,7 +91,7 @@ export default function LeConceptPage() {
       <section className="bg-white pt-12 pb-20 sm:pt-16 sm:pb-24">
         <div className="mx-auto max-w-7xl px-6 sm:px-10">
           <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
-            {steps.map(({ n, title, icon, body }) => (
+            {c.steps.map(({ n, title, icon, body }) => (
               <div key={n} className="flex flex-col items-center text-center">
                 <Image
                   src={icon}
@@ -155,31 +120,20 @@ export default function LeConceptPage() {
           </div>
           <div className="px-6 py-20 text-white sm:px-12 sm:py-24">
             <h2 className="font-display text-5xl font-medium leading-[1.05] text-white sm:text-6xl">
-              Comment ça marche&nbsp;?
+              {c.howItWorks.title}
             </h2>
             <div className="mt-6 max-w-md space-y-4 text-sm leading-relaxed text-white/90">
-              <p>
-                Au début de votre atelier, notre équipe prendra 10 minutes pour
-                vous expliquer toutes les techniques et le matériel que vous
-                pourrez utiliser. Nous serons là tout au long de votre atelier
-                pour vous accompagner dans la réalisation de vos créations.
-              </p>
-              <p>
-                Afin de préparer au mieux votre venue, vous pouvez sélectionner
-                des inspirations et idées de réalisations.
-              </p>
-              <p>
-                Pour cela, nous avons créé un tableau Pinterest avec plein
-                d&apos;idées.
-              </p>
+              <p>{c.howItWorks.paragraph1}</p>
+              <p>{c.howItWorks.paragraph2}</p>
+              <p>{c.howItWorks.paragraph3}</p>
             </div>
             <div className="mt-7">
               <ArtiButton
-                href="https://fr.pinterest.com/articafeceramique/inspirations/"
+                href={c.howItWorks.buttonHref}
                 external
                 variant="outline-light"
               >
-                📌 Découvrir les inspirations
+                {c.howItWorks.buttonLabel}
               </ArtiButton>
             </div>
           </div>
@@ -191,22 +145,22 @@ export default function LeConceptPage() {
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 sm:px-10 md:grid-cols-[1fr_2fr] md:gap-16">
           <div>
             <h2 className="font-display text-5xl font-medium leading-[1.05] text-foreground sm:text-6xl">
-              Un aperçu du coffee shop
+              {c.apercu.title}
             </h2>
             <div className="mt-8">
-              <ArtiButton href="/carte" variant="sauge">
-                Voir la carte
+              <ArtiButton href={c.apercu.buttonHref} variant="sauge">
+                {c.apercu.buttonLabel}
               </ArtiButton>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { src: '/brand/apercu-2.png', alt: 'Le comptoir du coffee shop ARTI' },
-              { src: '/brand/apercu-1.png', alt: 'Étagères de céramiques chez ARTI' },
-              { src: '/brand/apercu-3.png', alt: 'La salle du coffee shop ARTI' },
-            ].map((img) => (
+              { src: c.apercu.image1, alt: 'Le comptoir du coffee shop ARTI' },
+              { src: c.apercu.image2, alt: 'Étagères de céramiques chez ARTI' },
+              { src: c.apercu.image3, alt: 'La salle du coffee shop ARTI' },
+            ].map((img, i) => (
               <div
-                key={img.src}
+                key={i}
                 className="group relative aspect-[3/4] overflow-hidden shadow-lg"
               >
                 <Image
@@ -227,30 +181,17 @@ export default function LeConceptPage() {
       <section className="bg-beige-deep py-20 sm:py-24">
         <div className="mx-auto max-w-6xl px-6 sm:px-10">
           <h2 className="text-center font-display text-5xl font-medium text-foreground sm:text-6xl">
-            Nos partenaires locaux
+            {c.partenaires.title}
           </h2>
           <div className="mt-12 grid items-center gap-12 md:grid-cols-2 md:gap-16">
             <div className="space-y-4 text-sm leading-relaxed text-foreground/85">
-              <p>
-                Pour le café, nous travaillons avec Café&nbsp;1802. Fred et
-                Renaud, barista et torréfacteur, sélectionnent des cafés de
-                spécialité issus du commerce équitable et les torréfient en
-                Bretagne, à Saint-Thuriau. Des recettes uniques, à découvrir
-                tasse après tasse.
-              </p>
-              <p>
-                Côté gourmandise, nos pâtisseries viennent de Bonœuf&nbsp;: des
-                cookies généreux, 100&nbsp;% végétaux, fabriqués juste à côté de
-                Rennes.
-              </p>
-              <p>
-                Travailler avec des producteurs locaux, c'est notre façon de
-                vous offrir le meilleur tout en soutenant le savoir-faire d'ici.
-              </p>
+              <p>{c.partenaires.paragraph1}</p>
+              <p>{c.partenaires.paragraph2}</p>
+              <p>{c.partenaires.paragraph3}</p>
             </div>
             <div className="relative aspect-[4/3] overflow-hidden shadow-lg">
               <Image
-                src="/brand/partenaires.png"
+                src={c.partenaires.image}
                 alt="Nos partenaires locaux à Rennes"
                 fill
                 sizes="(max-width: 768px) 100vw, 45vw"

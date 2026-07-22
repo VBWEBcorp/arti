@@ -20,6 +20,10 @@ import {
   FilePen,
   ChevronDown,
   Gift,
+  Sparkles,
+  Palette,
+  Package,
+  Coffee,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSidebar } from '@/components/admin/sidebar-context'
@@ -30,6 +34,11 @@ const navItems = [
 
 const pageEditItems = [
   { href: '/admin/pages/accueil', label: 'Accueil', icon: Home },
+  { href: '/admin/pages/le-concept', label: 'Le concept', icon: Sparkles },
+  { href: '/admin/pages/arti-ceramiques', label: 'Les céramiques', icon: Palette },
+  { href: '/admin/pages/carte', label: 'La carte', icon: Coffee },
+  { href: '/admin/pages/arti-cadeaux', label: 'Cartes cadeaux', icon: Gift },
+  { href: '/admin/pages/kit-a-emporter', label: 'Kit à emporter', icon: Package },
   { href: '/admin/pages/infos-pratiques', label: 'Infos pratiques', icon: Phone },
   { href: '/admin/pages/faq', label: 'FAQ', icon: MessageSquare },
 ]

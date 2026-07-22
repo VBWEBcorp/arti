@@ -19,6 +19,11 @@ interface PageEditorProps {
 
 const previewPaths: Record<string, string> = {
   home: '/',
+  'le-concept': '/le-concept',
+  'arti-ceramiques': '/arti-ceramiques',
+  carte: '/carte',
+  'arti-cadeaux': '/arti-cadeaux',
+  'kit-a-emporter': '/kit-a-emporter',
   'infos-pratiques': '/infos-pratiques',
   faq: '/faq',
 }

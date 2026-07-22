@@ -39,14 +39,14 @@ export default async function FaqPage() {
         {/* CTA — question restante */}
         <div className="mt-14 border-t border-foreground/10 pt-10">
           <h2 className="font-display text-3xl font-medium text-foreground sm:text-4xl">
-            Vous ne trouvez pas votre réponse&nbsp;?
+            {faq.contactCta.title}
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-foreground/70">
-            Écrivez-nous, nous vous répondrons avec plaisir.
+            {faq.contactCta.text}
           </p>
           <div className="mt-6 flex justify-center">
-            <ArtiButton href="/infos-pratiques#reserver" variant="sauge">
-              Nous contacter
+            <ArtiButton href={faq.contactCta.buttonHref} variant="sauge">
+              {faq.contactCta.buttonLabel}
             </ArtiButton>
           </div>
         </div>

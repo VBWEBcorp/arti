@@ -14,6 +14,7 @@ import {
   ScanLine,
   Search,
   Sparkles,
+  Trash2,
   Wallet,
   X,
 } from 'lucide-react'
@@ -94,7 +95,7 @@ export default function AdminGiftCardsPage() {
   const [detail, setDetail] = useState<GiftCard | null>(null)
   const [confirmState, setConfirmState] = useState<{
     id: string
-    action: 'cancel' | 'reactivate'
+    action: 'cancel' | 'reactivate' | 'delete'
     tone: 'danger' | 'primary'
     title: string
     message: string
@@ -163,16 +164,34 @@ export default function AdminGiftCardsPage() {
       confirmLabel: 'Réactiver',
     })
 
+  const deleteCard = (id: string) =>
+    setConfirmState({
+      id,
+      action: 'delete',
+      tone: 'danger',
+      title: 'Supprimer cette carte ?',
+      message:
+        'La carte sera définitivement effacée de la base. Contrairement à l’annulation, cette action est irréversible : elle ne pourra pas être réactivée.',
+      confirmLabel: 'Supprimer définitivement',
+    })
+
   // Exécute l'action confirmée. Gère erreurs serveur ET réseau (« Failed to fetch »).
   const runConfirm = async () => {
     if (!confirmState) return
     setConfirmLoading(true)
     setConfirmError(null)
     try {
-      const res = await fetch(`/api/gift-cards/${confirmState.id}/${confirmState.action}`, {
-        method: 'PATCH',
-        headers: authHeaders(),
-      })
+      // Suppression = DELETE /api/gift-cards/:id ; annuler/réactiver = PATCH .../:action.
+      const isDelete = confirmState.action === 'delete'
+      const res = await fetch(
+        isDelete
+          ? `/api/gift-cards/${confirmState.id}`
+          : `/api/gift-cards/${confirmState.id}/${confirmState.action}`,
+        {
+          method: isDelete ? 'DELETE' : 'PATCH',
+          headers: authHeaders(),
+        }
+      )
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Une erreur est survenue.')
       setConfirmState(null)
@@ -289,10 +308,10 @@ export default function AdminGiftCardsPage() {
           ) : (
             <ul className="divide-y divide-foreground/10">
               {cards.map((c) => (
-                <li key={c._id}>
+                <li key={c._id} className="flex items-stretch">
                   <button
                     onClick={() => setDetail(c)}
-                    className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-beige-light sm:px-5"
+                    className="flex min-w-0 flex-1 items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-beige-light sm:px-5"
                   >
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-beige text-sauge-deep">
                       <Gift className="size-4" />
@@ -322,6 +341,16 @@ export default function AdminGiftCardsPage() {
                       {eur(c.initialAmount)}
                     </p>
                   </button>
+
+                  {/* Suppression définitive (bouton distinct pour ne pas imbriquer de boutons) */}
+                  <button
+                    onClick={() => deleteCard(c._id)}
+                    title="Supprimer définitivement"
+                    aria-label={`Supprimer la carte ${c.code}`}
+                    className="flex shrink-0 items-center justify-center border-l border-foreground/10 px-4 text-foreground/30 transition-colors hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </li>
               ))}
             </ul>
@@ -340,6 +369,7 @@ export default function AdminGiftCardsPage() {
           onClose={() => setDetail(null)}
           onCancel={cancelCard}
           onReactivate={reactivateCard}
+          onDelete={deleteCard}
         />
       )}
       {confirmState && (
@@ -348,6 +378,7 @@ export default function AdminGiftCardsPage() {
           message={confirmState.message}
           confirmLabel={confirmState.confirmLabel}
           tone={confirmState.tone}
+          icon={confirmState.action === 'delete' ? Trash2 : undefined}
           loading={confirmLoading}
           error={confirmError}
           onConfirm={runConfirm}
@@ -719,11 +750,13 @@ function DetailModal({
   onClose,
   onCancel,
   onReactivate,
+  onDelete,
 }: {
   card: GiftCard
   onClose: () => void
   onCancel: (id: string) => void
   onReactivate: (id: string) => void
+  onDelete: (id: string) => void
 }) {
   const [pdfBusy, setPdfBusy] = useState<'preview' | 'download' | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
@@ -854,15 +887,25 @@ function DetailModal({
           {pdfError && <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{pdfError}</p>}
         </div>
 
-        {card.status === 'cancelled' ? (
-          <button onClick={() => onReactivate(card._id)} className={cn(btnPrimary, 'w-full')}>
-            <RefreshCw className="size-4" /> Réactiver la carte
+        <div className="space-y-2.5">
+          {card.status === 'cancelled' ? (
+            <button onClick={() => onReactivate(card._id)} className={cn(btnPrimary, 'w-full')}>
+              <RefreshCw className="size-4" /> Réactiver la carte
+            </button>
+          ) : (
+            <button onClick={() => onCancel(card._id)} className={btnDanger}>
+              <Ban className="size-4" /> Annuler la carte
+            </button>
+          )}
+
+          {/* Suppression définitive (irréversible), distincte de l'annulation. */}
+          <button
+            onClick={() => onDelete(card._id)}
+            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md text-sm font-medium text-foreground/50 transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            <Trash2 className="size-4" /> Supprimer définitivement
           </button>
-        ) : (
-          <button onClick={() => onCancel(card._id)} className={btnDanger}>
-            <Ban className="size-4" /> Annuler la carte
-          </button>
-        )}
+        </div>
       </div>
     </Modal>
   )

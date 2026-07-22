@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 
 import { InfoCards } from '@/components/arti/info-cards'
+import { carteDefaults } from '@/lib/content-defaults'
+import { getPageContent } from '@/lib/page-content'
 
 export const metadata: Metadata = {
   title: 'La carte',
@@ -10,55 +12,11 @@ export const metadata: Metadata = {
   alternates: { canonical: '/carte' },
 }
 
-type MenuItem = { name: string; desc?: string; price: string }
-type MenuCategory = { title: string; note?: string; items: MenuItem[] }
+export const dynamic = 'force-dynamic'
 
-// NB : intitulés et prix indicatifs — à ajuster avec la vraie carte ARTI.
-const menu: MenuCategory[] = [
-  {
-    title: 'Cafés',
-    note: 'Torréfiés en Bretagne par Café 1802, à Saint-Thuriau.',
-    items: [
-      { name: 'Expresso', price: '2,00 €' },
-      { name: 'Double expresso', price: '2,80 €' },
-      { name: 'Café allongé', price: '2,20 €' },
-      { name: 'Cappuccino', price: '3,80 €' },
-      { name: 'Café latte', price: '4,00 €' },
-      { name: 'Flat white', price: '4,00 €' },
-      { name: 'Mocha', desc: 'café & chocolat', price: '4,50 €' },
-    ],
-  },
-  {
-    title: 'Thés & chocolats',
-    items: [
-      { name: 'Thé ou infusion', desc: 'sélection de la maison', price: '3,50 €' },
-      { name: 'Matcha latte', price: '4,50 €' },
-      { name: 'Chai latte', price: '4,50 €' },
-      { name: 'Chocolat chaud', price: '4,00 €' },
-    ],
-  },
-  {
-    title: 'Boissons fraîches',
-    items: [
-      { name: 'Café glacé', price: '4,50 €' },
-      { name: 'Matcha glacé', price: '4,80 €' },
-      { name: 'Limonade artisanale', price: '4,00 €' },
-      { name: 'Jus de fruits', price: '3,80 €' },
-      { name: 'Smoothie', price: '5,00 €' },
-    ],
-  },
-  {
-    title: 'Gourmandises',
-    note: 'Pâtisseries 100 % végétales de Bonœuf, fabriquées près de Rennes.',
-    items: [
-      { name: 'Cookie Bonœuf', price: '3,50 €' },
-      { name: 'Pâtisserie du jour', price: '4,00 €' },
-      { name: 'Part de gâteau', price: '4,50 €' },
-    ],
-  },
-]
+export default async function CartePage() {
+  const c = await getPageContent('carte', carteDefaults)
 
-export default function CartePage() {
   return (
     <>
       {/* HERO */}
@@ -68,7 +26,7 @@ export default function CartePage() {
           <div className="relative flex items-center bg-sauge px-6 py-16 sm:px-10 sm:py-20 md:px-0 md:py-28">
             <div className="relative mx-auto w-full max-w-[460px] md:ml-auto md:mr-[8%]">
               <Image
-                src="/brand/apercu-2.png"
+                src={c.hero.image}
                 alt="Le comptoir du coffee shop ARTI à Rennes"
                 width={800}
                 height={1000}
@@ -82,20 +40,11 @@ export default function CartePage() {
           <div className="flex items-center bg-white px-6 py-16 sm:px-12 md:py-28 lg:px-20">
             <div className="max-w-md">
               <h1 className="font-display text-5xl font-medium leading-[1.05] text-neutral-700 sm:text-6xl">
-                La carte
+                {c.hero.title}
               </h1>
               <div className="mt-6 space-y-4 text-sm leading-relaxed text-foreground/85">
-                <p>
-                  Chez Arti, vous retrouverez une jolie sélection de cafés, thés
-                  et boissons fraîches, ainsi que des gâteaux pour les
-                  gourmands&nbsp;!
-                </p>
-                <p>
-                  Notre café est torréfié en Bretagne, à Saint-Thuriau, par
-                  Café&nbsp;1802. Nous avons à cœur de travailler avec des
-                  produits locaux, à savourer sur place pendant votre atelier ou
-                  le temps d&apos;une pause.
-                </p>
+                <p>{c.hero.paragraph1}</p>
+                <p>{c.hero.paragraph2}</p>
               </div>
             </div>
           </div>
@@ -106,7 +55,7 @@ export default function CartePage() {
       <section className="bg-beige-light py-16 sm:py-24">
         <div className="mx-auto max-w-5xl px-6 sm:px-10">
           <div className="grid gap-8 md:grid-cols-2 md:gap-x-12 md:gap-y-12">
-            {menu.map((cat) => (
+            {c.menu.map((cat) => (
               <div key={cat.title} className="bg-white p-8 shadow-sm sm:p-10">
                 <h2 className="font-display text-4xl font-medium text-neutral-700">
                   {cat.title}
@@ -147,8 +96,7 @@ export default function CartePage() {
           </div>
 
           <p className="mt-10 text-center text-xs text-foreground/50">
-            Carte non contractuelle, susceptible d&apos;évoluer selon les saisons
-            et les arrivages.
+            {c.footnote}
           </p>
         </div>
       </section>

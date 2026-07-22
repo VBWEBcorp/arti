@@ -77,6 +77,32 @@ export default function AdminFaqPage() {
                 <Plus className="size-4" /> Ajouter une question
               </Button>
             </SectionEditor>
+
+            <SectionEditor title="Bloc « Nous contacter » (bas de page)">
+              <FieldEditor
+                label="Titre"
+                value={content.contactCta?.title}
+                onChange={(v) => update('contactCta.title', v)}
+              />
+              <FieldEditor
+                label="Texte"
+                value={content.contactCta?.text}
+                onChange={(v) => update('contactCta.text', v)}
+                type="textarea"
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FieldEditor
+                  label="Libellé du bouton"
+                  value={content.contactCta?.buttonLabel}
+                  onChange={(v) => update('contactCta.buttonLabel', v)}
+                />
+                <FieldEditor
+                  label="Lien du bouton"
+                  value={content.contactCta?.buttonHref}
+                  onChange={(v) => update('contactCta.buttonHref', v)}
+                />
+              </div>
+            </SectionEditor>
           </>
         )
       }}

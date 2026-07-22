@@ -34,7 +34,7 @@ const jsonLd = {
 }
 
 export default async function HomePage() {
-  const { hero } = await getPageContent('home', homeDefaults)
+  const { hero, equipe } = await getPageContent('home', homeDefaults)
 
   return (
     <>
@@ -95,7 +95,7 @@ export default async function HomePage() {
           {/* Photo collée au bord gauche, pleine hauteur */}
           <div className="relative min-h-[320px] md:min-h-[480px]">
             <Image
-              src="/brand/equipe.png"
+              src={equipe.image}
               alt="L'équipe ARTI"
               fill
               sizes="(max-width: 768px) 100vw, 40vw"
@@ -108,26 +108,12 @@ export default async function HomePage() {
           <div className="flex items-center px-6 py-16 sm:px-12 md:py-20 lg:pl-20 lg:pr-28">
             <div className="max-w-xl">
               <h2 className="font-display text-5xl font-medium leading-[1.05] text-foreground sm:text-6xl">
-                Notre équipe
+                {equipe.title}
               </h2>
               <div className="mt-8 space-y-4 text-justify text-sm leading-relaxed text-foreground/85">
-                <p>
-                  Chez Arti, Chloé, Anne et Jasmine vous accueilleront lors de
-                  vos ateliers pour vous faire vivre un moment créatif et
-                  relaxant !
-                </p>
-                <p>
-                  Nous mettons tout notre cœur à vous accompagner dans la
-                  réalisation de votre pièce, que vous veniez peindre pour le
-                  plaisir, pour offrir ou simplement pour vous détendre. Nous
-                  aimons partager nos conseils et nos idées pour que chaque
-                  atelier soit une belle expérience, pleine de bonne humeur et
-                  de créativité.
-                </p>
-                <p>
-                  Chez nous, pas besoin d&apos;être artiste : on vous guide pas
-                  à pas, toujours avec le sourire !
-                </p>
+                <p>{equipe.paragraph1}</p>
+                <p>{equipe.paragraph2}</p>
+                <p>{equipe.paragraph3}</p>
               </div>
             </div>
           </div>

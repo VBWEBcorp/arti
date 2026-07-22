@@ -308,6 +308,19 @@ export async function reactivateGiftCard(
   return giftCard
 }
 
+/**
+ * Suppression définitive d'une carte (contrairement à l'annulation, qui est
+ * réversible). La carte est effacée de la base : action irréversible, réservée
+ * à l'admin (nettoyage, cartes de test…).
+ */
+export async function deleteGiftCard(id: string): Promise<void> {
+  await connectDB()
+  if (!mongoose.isValidObjectId(id)) throw new GiftCardError('Carte cadeau introuvable', 404)
+  const deleted = await GiftCard.findByIdAndDelete(id)
+  if (!deleted) throw new GiftCardError('Carte cadeau introuvable', 404)
+  console.log(`[giftcard] supprimée définitivement ${deleted.code}`)
+}
+
 type PurchaseData = {
   amount: number
   purchaser?: { name?: string; email?: string; userId?: string | null }
