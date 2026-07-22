@@ -75,8 +75,8 @@
   --beige: #EFE7D2;
   --beige-light: #F5EFE0;
   --beige-deep: #E3DABE;
-  --sauge: #9CAA8B;
-  --sauge-deep: #7E8D6E;
+  --sauge: #91977D;
+  --sauge-deep: #757A65;
   --navy: #1B2E4A;
   --terracotta: #E89A6A;
 
@@ -89,7 +89,7 @@
   --popover: #FFFFFF;
   --popover-foreground: #1B2E4A;
 
-  --primary: #9CAA8B;
+  --primary: #91977D;
   --primary-foreground: #FFFFFF;
 
   --secondary: #F5EFE0;
@@ -106,28 +106,28 @@
 
   --border: rgba(27, 46, 74, 0.12);
   --input: rgba(27, 46, 74, 0.12);
-  --ring: #9CAA8B;
+  --ring: #91977D;
 
-  --chart-1: #9CAA8B;
+  --chart-1: #91977D;
   --chart-2: #E89A6A;
   --chart-3: #1B2E4A;
   --chart-4: #E3DABE;
-  --chart-5: #7E8D6E;
+  --chart-5: #757A65;
 
   --sidebar: #F5EFE0;
   --sidebar-foreground: #1B2E4A;
-  --sidebar-primary: #9CAA8B;
+  --sidebar-primary: #91977D;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #EFE7D2;
   --sidebar-accent-foreground: #1B2E4A;
   --sidebar-border: rgba(27, 46, 74, 0.1);
-  --sidebar-ring: #9CAA8B;
+  --sidebar-ring: #91977D;
 
   --shadow-xs: 0 1px 2px rgba(27, 46, 74, 0.04);
   --shadow-sm: 0 2px 8px rgba(27, 46, 74, 0.06);
   --shadow-md: 0 8px 24px rgba(27, 46, 74, 0.08);
   --shadow-lg: 0 24px 48px rgba(27, 46, 74, 0.1);
-  --glow: 0 0 80px rgba(156, 170, 139, 0.25);
+  --glow: 0 0 80px rgba(145, 151, 125, 0.25);
 }
 
 .dark {
@@ -138,7 +138,7 @@
   --card-foreground: #F5EFE0;
   --popover: #243650;
   --popover-foreground: #F5EFE0;
-  --primary: #9CAA8B;
+  --primary: #91977D;
   --primary-foreground: #1B2E4A;
   --secondary: #2A3D5A;
   --secondary-foreground: #F5EFE0;
@@ -148,7 +148,7 @@
   --accent-foreground: #1B2E4A;
   --border: rgba(245, 239, 224, 0.12);
   --input: rgba(245, 239, 224, 0.14);
-  --ring: #9CAA8B;
+  --ring: #91977D;
 }
 
 @layer utilities {
@@ -226,10 +226,20 @@
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0.005em;
     color: var(--navy);
   }
+}
+
+/* Gros titres en écriture manuscrite (Caveat) : plus fins, moins gras.
+   Règle hors @layer → l'emporte sur les utilitaires font-medium/font-semibold
+   posés sur les titres, sans toucher les boutons/labels. */
+h1.font-display,
+h2.font-display,
+h3.font-display,
+h4.font-display {
+  font-weight: 400;
 }
 
 @utility scrollbar-hide {

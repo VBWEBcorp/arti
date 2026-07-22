@@ -7,7 +7,7 @@ export const siteConfig = {
     'ARTI est un coffee shop et atelier de peinture sur céramique au cœur de Rennes. Vivez un moment créatif unique en personnalisant la pièce de votre choix tout en dégustant un délicieux goûter.',
   ogImage: 'https://articafeceramique.fr/og.png',
   twitterHandle: '@articafeceramique',
-  themeColor: '#9CAA8B',
+  themeColor: '#91977D',
   phone: '+33 6 33 11 30 54',
   phoneDisplay: '06 33 11 30 54',
   email: 'hello@articafeceramique.fr',
