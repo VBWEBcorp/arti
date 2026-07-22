@@ -176,7 +176,8 @@ export const leConceptDefaults = {
 }
 
 export type Ceramic = {
-  src: string
+  /** Une ou plusieurs photos de la pièce (défilent en carousel si >1). */
+  images: string[]
   name: string
   category: string
   price: string
@@ -194,22 +195,22 @@ export const artiCeramiquesDefaults = {
     image2: '/brand/ceramiques-2.png',
   },
   catalogue: [
-    { src: '/brand/produits/Assiette-Moma.jpg', name: 'Assiette Moma', category: 'Assiettes', price: '25 €', alt: 'Assiette Moma peinte à la main' },
-    { src: '/brand/produits/Assiette-Fleur-Ours-de-Noel.jpg', name: 'Assiette Fleur & Ours de Noël', category: 'Assiettes', price: '25 €', alt: 'Assiette Fleur & Ours de Noël' },
-    { src: '/brand/produits/Tasse-Lila-Univers-marin.jpg', name: 'Tasse Lila Univers marin', category: 'Tasses & mugs', price: '18 €', alt: 'Tasse Lila Univers marin' },
-    { src: '/brand/produits/Grand-pichet-Serpent.jpg', name: 'Grand pichet Serpent', category: 'Pichets & vases', price: '45 €', alt: 'Grand pichet Serpent' },
-    { src: '/brand/produits/Plateau-de-Noel.jpg', name: 'Plateau de Noël', category: 'Plateaux', price: '35 €', alt: 'Plateau de Noël' },
-    { src: '/brand/produits/Bol-breton.jpg', name: 'Bol breton', category: 'Bols', price: '20 €', alt: 'Bol breton' },
-    { src: '/brand/produits/Coquetiers-Matchy.jpg', name: 'Coquetiers Matchy', category: 'Coquetiers', price: '15 €', alt: 'Coquetiers Matchy' },
-    { src: '/brand/produits/Mug-Take-Away-x-Camille-Esnee.jpg', name: 'Mug Take Away × Camille Esnée', category: 'Tasses & mugs', price: '22 €', alt: 'Mug Take Away x Camille Esnée' },
-    { src: '/brand/produits/Assiette-moma-Dinosaure.jpg', name: 'Assiette Moma Dinosaure', category: 'Assiettes', price: '25 €', alt: 'Assiette Moma Dinosaure' },
-    { src: '/brand/produits/Soliflore-conique-Floral.jpg', name: 'Soliflore conique Floral', category: 'Pichets & vases', price: '30 €', alt: 'Soliflore conique Floral' },
-    { src: '/brand/produits/Bol-conique-Oursons.jpg', name: 'Bol conique Oursons', category: 'Bols', price: '20 €', alt: 'Bol conique Oursons' },
-    { src: '/brand/produits/Assiette-moma-Ocean.jpg', name: 'Assiette Moma Océan', category: 'Assiettes', price: '25 €', alt: 'Assiette Moma Océan' },
-    { src: '/brand/produits/Plateau-De-Gaston.jpg', name: 'Plateau de Gaston', category: 'Plateaux', price: '35 €', alt: 'Plateau de Gaston' },
-    { src: '/brand/produits/Assiette-Noel-chez-Arti.jpg', name: 'Assiette Noël chez Arti', category: 'Assiettes', price: '25 €', alt: 'Assiette Noël chez Arti' },
-    { src: '/brand/produits/Coupelle-Leopard.jpg', name: 'Coupelle Léopard', category: 'Coupelles', price: '16 €', alt: 'Coupelle Léopard' },
-    { src: '/brand/produits/Coquetiers-Matching.jpg', name: 'Coquetiers Matching', category: 'Coquetiers', price: '15 €', alt: 'Coquetiers Matching' },
+    { images: ['/brand/produits/Assiette-Moma.jpg'], name: 'Assiette Moma', category: 'Assiettes', price: '25 €', alt: 'Assiette Moma peinte à la main' },
+    { images: ['/brand/produits/Assiette-Fleur-Ours-de-Noel.jpg'], name: 'Assiette Fleur & Ours de Noël', category: 'Assiettes', price: '25 €', alt: 'Assiette Fleur & Ours de Noël' },
+    { images: ['/brand/produits/Tasse-Lila-Univers-marin.jpg'], name: 'Tasse Lila Univers marin', category: 'Tasses & mugs', price: '18 €', alt: 'Tasse Lila Univers marin' },
+    { images: ['/brand/produits/Grand-pichet-Serpent.jpg'], name: 'Grand pichet Serpent', category: 'Pichets & vases', price: '45 €', alt: 'Grand pichet Serpent' },
+    { images: ['/brand/produits/Plateau-de-Noel.jpg'], name: 'Plateau de Noël', category: 'Plateaux', price: '35 €', alt: 'Plateau de Noël' },
+    { images: ['/brand/produits/Bol-breton.jpg'], name: 'Bol breton', category: 'Bols', price: '20 €', alt: 'Bol breton' },
+    { images: ['/brand/produits/Coquetiers-Matchy.jpg'], name: 'Coquetiers Matchy', category: 'Coquetiers', price: '15 €', alt: 'Coquetiers Matchy' },
+    { images: ['/brand/produits/Mug-Take-Away-x-Camille-Esnee.jpg'], name: 'Mug Take Away × Camille Esnée', category: 'Tasses & mugs', price: '22 €', alt: 'Mug Take Away x Camille Esnée' },
+    { images: ['/brand/produits/Assiette-moma-Dinosaure.jpg'], name: 'Assiette Moma Dinosaure', category: 'Assiettes', price: '25 €', alt: 'Assiette Moma Dinosaure' },
+    { images: ['/brand/produits/Soliflore-conique-Floral.jpg'], name: 'Soliflore conique Floral', category: 'Pichets & vases', price: '30 €', alt: 'Soliflore conique Floral' },
+    { images: ['/brand/produits/Bol-conique-Oursons.jpg'], name: 'Bol conique Oursons', category: 'Bols', price: '20 €', alt: 'Bol conique Oursons' },
+    { images: ['/brand/produits/Assiette-moma-Ocean.jpg'], name: 'Assiette Moma Océan', category: 'Assiettes', price: '25 €', alt: 'Assiette Moma Océan' },
+    { images: ['/brand/produits/Plateau-De-Gaston.jpg'], name: 'Plateau de Gaston', category: 'Plateaux', price: '35 €', alt: 'Plateau de Gaston' },
+    { images: ['/brand/produits/Assiette-Noel-chez-Arti.jpg'], name: 'Assiette Noël chez Arti', category: 'Assiettes', price: '25 €', alt: 'Assiette Noël chez Arti' },
+    { images: ['/brand/produits/Coupelle-Leopard.jpg'], name: 'Coupelle Léopard', category: 'Coupelles', price: '16 €', alt: 'Coupelle Léopard' },
+    { images: ['/brand/produits/Coquetiers-Matching.jpg'], name: 'Coquetiers Matching', category: 'Coquetiers', price: '15 €', alt: 'Coquetiers Matching' },
   ] as Ceramic[],
 }
 

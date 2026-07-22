@@ -1,17 +1,107 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 
+import type { Ceramic } from '@/lib/content-defaults'
 import { cn } from '@/lib/utils'
 
-export type Ceramic = {
-  src: string
-  name: string
-  category: string
-  price: string
-  alt: string
+export type { Ceramic }
+
+/** Photos utilisables d'une pièce (compat : ancien champ `src` unique éventuel). */
+function photosOf(c: Ceramic): string[] {
+  const list = Array.isArray(c.images) ? c.images.filter(Boolean) : []
+  if (list.length) return list
+  const legacy = (c as unknown as { src?: string }).src
+  return legacy ? [legacy] : []
+}
+
+/** Carte d'une pièce : carousel de photos (si plusieurs) + infos. */
+function CeramicCard({ c }: { c: Ceramic }) {
+  const photos = photosOf(c)
+  const [index, setIndex] = useState(0)
+  const count = photos.length
+  const current = count ? ((index % count) + count) % count : 0
+  const go = (dir: number) => setIndex((i) => i + dir)
+
+  return (
+    <article className="group flex flex-col">
+      <div className="relative aspect-[3/4] overflow-hidden bg-white shadow-sm">
+        {count > 0 ? (
+          <>
+            {/* Piste qui défile horizontalement */}
+            <div
+              className="absolute inset-0 flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${current * 100}%)` }}
+            >
+              {photos.map((src, i) => (
+                <div key={i} className="relative h-full w-full shrink-0">
+                  <Image
+                    src={src}
+                    alt={count > 1 ? `${c.alt} — photo ${i + 1}` : c.alt}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    loading="lazy"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {count > 1 && (
+              <>
+                {/* Flèches (visibles au survol sur desktop, toujours sur mobile) */}
+                <button
+                  type="button"
+                  onClick={() => go(-1)}
+                  aria-label="Photo précédente"
+                  className="absolute left-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-neutral-800 shadow-sm transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => go(1)}
+                  aria-label="Photo suivante"
+                  className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-neutral-800 shadow-sm transition-opacity hover:bg-white sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+
+                {/* Points indicateurs */}
+                <div className="absolute inset-x-0 bottom-2 flex justify-center gap-1.5">
+                  {photos.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setIndex(i)}
+                      aria-label={`Aller à la photo ${i + 1}`}
+                      className={cn(
+                        'size-1.5 rounded-full transition-all',
+                        i === current ? 'w-4 bg-white' : 'bg-white/60 hover:bg-white/80'
+                      )}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="flex h-full items-center justify-center bg-beige text-xs text-foreground/40">
+            Aucune photo
+          </div>
+        )}
+      </div>
+      <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.18em] text-sauge-deep">
+        {c.category}
+      </p>
+      <h3 className="mt-1 font-display text-lg font-medium leading-tight text-neutral-800">
+        {c.name}
+      </h3>
+      <p className="mt-1 text-sm text-foreground/70">{c.price}</p>
+    </article>
+  )
 }
 
 export function CeramicsCatalogue({ items }: { items: Ceramic[] }) {
@@ -89,26 +179,8 @@ export function CeramicsCatalogue({ items }: { items: Ceramic[] }) {
       {/* Grille */}
       {filtered.length > 0 ? (
         <div className="mt-12 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
-          {filtered.map((c) => (
-            <article key={c.src} className="group flex flex-col">
-              <div className="relative aspect-[3/4] overflow-hidden bg-white shadow-sm">
-                <Image
-                  src={c.src}
-                  alt={c.alt}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  loading="lazy"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
-              <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.18em] text-sauge-deep">
-                {c.category}
-              </p>
-              <h3 className="mt-1 font-display text-lg font-medium leading-tight text-neutral-800">
-                {c.name}
-              </h3>
-              <p className="mt-1 text-sm text-foreground/70">{c.price}</p>
-            </article>
+          {filtered.map((c, i) => (
+            <CeramicCard key={`${c.name}-${i}`} c={c} />
           ))}
         </div>
       ) : (
