@@ -42,7 +42,7 @@ export interface IGiftCard extends Document {
 
 const GiftCardSchema = new Schema<IGiftCard>(
   {
-    // Code unique de la carte (format GC-XXXX-XXXX)
+    // Code unique de la carte (format court GC-XXXX)
     code: { type: String, required: true, unique: true, uppercase: true, trim: true },
 
     initialAmount: { type: Number, required: true, min: 0 },

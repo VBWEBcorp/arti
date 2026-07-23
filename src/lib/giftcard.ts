@@ -1,6 +1,4 @@
 import crypto from 'crypto'
-import path from 'path'
-import { readFile } from 'fs/promises'
 import mongoose from 'mongoose'
 
 import { connectDB } from '@/lib/db'
@@ -45,13 +43,12 @@ function objectIdOrNull(id: string | null | undefined): string | null {
   return id && mongoose.isValidObjectId(id) ? id : null
 }
 
-/** Génère un code (format GC-XXXX-XXXX), sans I/O/0/1 pour la lisibilité. */
+/** Génère un code court (format GC-XXXX), sans I/O/0/1 pour la lisibilité. */
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const bytes = crypto.randomBytes(8)
-  const part = (offset: number) =>
-    Array.from({ length: 4 }, (_, i) => chars[bytes[offset + i] % chars.length]).join('')
-  return `GC-${part(0)}-${part(4)}`
+  const bytes = crypto.randomBytes(4)
+  const part = Array.from({ length: 4 }, (_, i) => chars[bytes[i] % chars.length]).join('')
+  return `GC-${part}`
 }
 
 async function generateUniqueCode(): Promise<string> {
@@ -465,13 +462,10 @@ function giftCardEmailHtml(opts: {
     <tr><td align="center" style="padding:28px 14px;">
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;">
 
-        <!-- Logo ARTI (image inline, cid) -->
-        <tr><td style="background:#ffffff;padding:30px 28px 14px;text-align:center;">
-          <img src="cid:arti-logo" alt="ARTI" width="160" style="display:block;margin:0 auto;width:160px;max-width:62%;height:auto;">
-        </td></tr>
-        <!-- Bandeau vert -->
-        <tr><td style="background:#7d8a6f;padding:12px 28px;text-align:center;">
-          <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e7ece1;">Carte cadeau &middot; Café céramique</div>
+        <!-- En-tête -->
+        <tr><td style="background:#7d8a6f;padding:34px 28px;text-align:center;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:36px;line-height:1;letter-spacing:9px;color:#ffffff;">ARTI</div>
+          <div style="margin-top:10px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e7ece1;">Carte cadeau &middot; Café céramique</div>
         </td></tr>
 
         <!-- Intro -->
@@ -537,33 +531,11 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;')
 }
 
-// Logo ARTI intégré comme image inline (cid) dans les emails. Lu une seule fois
-// puis mis en cache. Même mécanisme fiable que le template PDF (public/brand).
-const ARTI_LOGO_PATH = path.join(process.cwd(), 'public', 'brand', 'logo-arti.png')
-let cachedLogoB64: string | null = null
-async function getArtiLogoBase64(): Promise<string | null> {
-  if (cachedLogoB64 !== null) return cachedLogoB64 || null
-  try {
-    const buf = await readFile(ARTI_LOGO_PATH)
-    cachedLogoB64 = buf.toString('base64')
-    return cachedLogoB64
-  } catch (err) {
-    console.error("[giftcard] logo ARTI introuvable pour l'email:", (err as Error).message)
-    cachedLogoB64 = '' // marque comme « tenté » pour ne pas relire à chaque envoi
-    return null
-  }
-}
-
 /** Envoi des emails de carte cadeau (acheteur + destinataire) via Resend. */
 async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
-  // Pièces jointes : logo ARTI (image inline via cid) + carte au format PDF.
-  // Échec de rendu non bloquant : l'email part quand même avec le code en texte.
+  // On joint la carte au format PDF (recto illustré + verso : numéro, montant,
+  // validité). Échec de rendu non bloquant : l'email part quand même en texte.
   const attachments: EmailAttachment[] = []
-
-  const logo = await getArtiLogoBase64()
-  if (logo) {
-    attachments.push({ filename: 'arti-logo.png', content: logo, contentId: 'arti-logo' })
-  }
 
   try {
     const pdf = await renderGiftCardPdf({

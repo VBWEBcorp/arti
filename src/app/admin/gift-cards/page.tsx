@@ -875,7 +875,7 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
                 setLookup(null)
                 setResult(null)
               }}
-              placeholder="GC-XXXX-XXXX"
+              placeholder="GC-XXXX"
               className={cn(inputCls, 'font-mono uppercase tracking-wider')}
             />
             <button

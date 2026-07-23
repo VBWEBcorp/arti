@@ -114,13 +114,13 @@ const argEmail = (process.argv.find((a) => a.startsWith('--send-email=')) || '')
   // ---------------------------------------------------------------- création
   console.log('Création & solde')
   let card
-  await test('createGiftCard : carte active, code GC-XXXX-XXXX, validité +1 an, tx purchase', async () => {
+  await test('createGiftCard : carte active, code GC-XXXX, validité +1 an, tx purchase', async () => {
     card = track(await giftcard.createGiftCard({ initialAmount: 30 }))
     eq(card.status, 'active', 'statut')
     eq(card.balance, 30, 'solde')
     eq(card.initialAmount, 30, 'montant initial')
-    assert(/^GC-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(card.code), `format de code invalide : ${card.code}`)
-    assert(!/[IO01]/.test(card.code.replace(/^GC-/, '').replace('-', '')), 'le code ne doit pas contenir I/O/0/1')
+    assert(/^GC-[A-Z2-9]{4}$/.test(card.code), `format de code invalide : ${card.code}`)
+    assert(!/[IO01]/.test(card.code.replace(/^GC-/, '')), 'le code ne doit pas contenir I/O/0/1')
     const days = (new Date(card.expiresAt) - Date.now()) / 86400000
     assert(days > 360 && days < 370, `validité ~1 an attendue, reçu ${days.toFixed(0)} j`)
     eq(card.transactions[0].type, 'purchase', 'type de la 1re transaction')

@@ -41,7 +41,7 @@ export function GiftCardBalance() {
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="GC-XXXX-XXXX"
+          placeholder="GC-XXXX"
           className="flex-1 border border-foreground/15 bg-white px-3 py-2.5 font-mono text-sm uppercase tracking-wider focus:border-sauge focus:outline-none"
         />
         <button
