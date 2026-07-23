@@ -652,8 +652,9 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 
 /* ---------- Création ---------- */
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const AMOUNTS = [15, 20, 25, 30, 40, 50]
   const [amount, setAmount] = useState('30')
-  const [source, setSource] = useState('admin')
+  const [source, setSource] = useState('on_site')
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [recipientName, setRecipientName] = useState('')
@@ -689,30 +690,50 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   }
 
   return (
-    <Modal title="Nouvelle carte" subtitle="Création manuelle (sans paiement en ligne)" onClose={onClose}>
+    <Modal
+      title="Nouvelle carte"
+      subtitle="Comme un achat en ligne, mais réglé au comptoir (TPE)"
+      onClose={onClose}
+    >
       <div className="space-y-6">
-        {/* Bandeau d'info : visuel de marque compact */}
-        <div className="flex items-center gap-3 rounded-lg bg-beige-light p-3">
-          <GiftCardVisual className="w-16 shrink-0" />
-          <p className="text-xs leading-relaxed text-foreground/60">
-            Visuel de marque ARTI. Le <strong className="text-foreground/75">numéro</strong>, le{' '}
-            <strong className="text-foreground/75">montant</strong> et la{' '}
-            <strong className="text-foreground/75">date de validité</strong> sont remplis sur le PDF
-            envoyé par email.
+        {/* Paiement au comptoir : aucun paiement en ligne */}
+        <div className="flex items-start gap-3 rounded-lg bg-sauge/10 p-3">
+          <GiftCardVisual className="w-14 shrink-0" />
+          <p className="text-xs leading-relaxed text-foreground/70">
+            <strong className="text-foreground">Paiement au comptoir (TPE)</strong> — aucun paiement
+            en ligne. La carte est créée exactement comme un achat sur le site&nbsp;; si un email est
+            renseigné, le client reçoit le <strong className="text-foreground/80">même email + PDF</strong>.
           </p>
         </div>
 
-        <Section title="Carte">
+        <Section title="Montant" hint="Mêmes montants que sur le site.">
+          <div className="grid grid-cols-3 gap-2">
+            {AMOUNTS.map((a) => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => setAmount(String(a))}
+                className={cn(
+                  'rounded-md py-2.5 font-display text-xl font-medium transition-all',
+                  Number(amount) === a
+                    ? 'bg-sauge text-white shadow-md'
+                    : 'border border-foreground/15 bg-beige-light text-foreground hover:border-sauge'
+                )}
+              >
+                {a}&nbsp;€
+              </button>
+            ))}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Montant (€)</label>
+              <label className={labelCls}>Autre montant (€)</label>
               <input type="number" min={5} max={500} value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Source</label>
+              <label className={labelCls}>Paiement / source</label>
               <select value={source} onChange={(e) => setSource(e.target.value)} className={inputCls}>
-                <option value="admin">Création admin</option>
-                <option value="on_site">Vente sur place</option>
+                <option value="on_site">Réglé au comptoir (TPE)</option>
+                <option value="admin">Offert (création manuelle)</option>
                 <option value="avoir">Avoir client</option>
                 <option value="employee_benefit">Avantage employé</option>
               </select>
