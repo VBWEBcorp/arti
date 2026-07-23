@@ -80,7 +80,7 @@ export const faqDefaults = {
     },
     {
       q: 'Comment offrir un atelier ?',
-      a: "Tu peux offrir une carte cadeau ARTI, de 10 € à 100 €. Elle est valable sur les ateliers comme sur la sélection de céramiques, et la personne choisit ensuite la date qui lui convient.",
+      a: "Tu peux offrir une carte cadeau ARTI, de 15 € à 50 €. Elle est valable sur les ateliers comme sur la sélection de céramiques, et la personne choisit ensuite la date qui lui convient.",
     },
     {
       q: "Conseils d'entretien",

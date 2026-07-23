@@ -37,9 +37,9 @@ type PurchaseResult = {
 }
 
 const FALLBACK: Config = {
-  presets: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-  min: 10,
-  max: 100,
+  presets: [15, 20, 25, 30, 40, 50],
+  min: 15,
+  max: 50,
   stripeConfigured: false,
   stripePublishableKey: '',
 }
@@ -241,7 +241,7 @@ export function GiftCardPurchase() {
             <h3 className="font-display text-2xl font-medium text-foreground">
               Quel montant souhaitez-vous offrir&nbsp;?
             </h3>
-            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            <div className="mt-4 grid grid-cols-3 gap-2">
               {config.presets.map((preset) => {
                 const selected = amount === preset
                 return (

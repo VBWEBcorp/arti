@@ -17,8 +17,8 @@ export class GiftCardError extends Error {
   }
 }
 
-/** Montants proposés à l'achat en ligne (alignés sur la vraie boutique : 10 → 100 €). */
-export const GIFT_CARD_PRESETS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const
+/** Montants proposés à l'achat en ligne (alignés sur la vraie boutique : 15 → 50 €). */
+export const GIFT_CARD_PRESETS = [15, 20, 25, 30, 40, 50] as const
 export const MIN_AMOUNT = 5
 export const MAX_AMOUNT = 500
 
