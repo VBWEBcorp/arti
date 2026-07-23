@@ -13,21 +13,27 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const code = typeof body.code === 'string' ? body.code.trim() : ''
+    const amount = Number(body.amount)
 
     if (!code) {
       return NextResponse.json({ error: 'Le code de la carte est requis' }, { status: 400 })
     }
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: 'Le montant à utiliser est requis' }, { status: 400 })
+    }
 
-    // Carte à usage unique : on consomme l'intégralité de la carte.
+    // Débit partiel : on retire `amount` du solde, le reste reste utilisable.
     const giftCard = await redeemOnSite(
       code,
       { id: user.userId, name: user.email },
+      amount,
       typeof body.description === 'string' ? body.description : null
     )
 
     return NextResponse.json({
       code: giftCard.code,
-      amount: giftCard.initialAmount,
+      amount,
+      balance: giftCard.balance,
       status: giftCard.status,
     })
   } catch (error) {

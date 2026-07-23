@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
   Ban,
+  Calculator,
+  ChevronDown,
   Download,
   Eye,
   Gift,
@@ -160,7 +162,7 @@ export default function AdminGiftCardsPage() {
       action: 'reactivate',
       tone: 'primary',
       title: 'Réactiver cette carte ?',
-      message: 'La carte redeviendra immédiatement utilisable (carte à usage unique).',
+      message: 'La carte redeviendra immédiatement utilisable, avec le solde restauré.',
       confirmLabel: 'Réactiver',
     })
 
@@ -250,6 +252,9 @@ export default function AdminGiftCardsPage() {
           <StatCard icon={Ban} tone="muted" label="Utilisées" value={String(stats.used)} />
         </div>
 
+        {/* Comptabilité — cartes expirées */}
+        <ExpiredStatsPanel />
+
         {/* Filtres */}
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <form
@@ -337,9 +342,16 @@ export default function AdminGiftCardsPage() {
                       </p>
                     </div>
 
-                    <p className="shrink-0 font-display text-xl font-medium leading-none text-foreground">
-                      {eur(c.initialAmount)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="font-display text-xl font-medium leading-none text-foreground">
+                        {eur(c.balance)}
+                      </p>
+                      {c.balance !== c.initialAmount && (
+                        <p className="mt-0.5 text-[10px] text-foreground/45">
+                          sur {eur(c.initialAmount)}
+                        </p>
+                      )}
+                    </div>
                   </button>
 
                   {/* Suppression définitive (bouton distinct pour ne pas imbriquer de boutons) */}
@@ -492,6 +504,108 @@ function StatCard({
   )
 }
 
+/* ---------- Comptabilité : cartes expirées ---------- */
+function ExpiredStatsPanel() {
+  const [open, setOpen] = useState(false)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<{
+    count: number
+    totalInitial: number
+    totalRemaining: number
+  } | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const p = new URLSearchParams()
+      if (from) p.set('from', from)
+      if (to) p.set('to', to)
+      const res = await fetch(`/api/gift-cards/expired-stats?${p.toString()}`, {
+        headers: authHeaders(),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.error || 'Erreur')
+      setStats(d)
+    } catch (err) {
+      setError(err instanceof TypeError ? 'Connexion impossible.' : (err as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }, [from, to])
+
+  useEffect(() => {
+    if (open && !stats && !loading) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-foreground/10 bg-white shadow-[var(--shadow-sm)]">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-beige-light"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <Calculator className="size-4 text-sauge-deep" />
+          Comptabilité — cartes expirées
+        </span>
+        <ChevronDown
+          className={cn('size-4 text-foreground/50 transition-transform', open && 'rotate-180')}
+        />
+      </button>
+
+      {open && (
+        <div className="border-t border-foreground/10 p-5">
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className={labelCls}>Du (date d&apos;expiration)</label>
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Au</label>
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
+            </div>
+            <button onClick={load} disabled={loading} className={btnPrimary}>
+              {loading ? <Loader2 className="size-4 animate-spin" /> : <Calculator className="size-4" />}
+              Calculer
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-foreground/50">
+            Cartes dont la date de validité est dépassée (toujours honorées). Laisser les dates
+            vides = toutes les cartes expirées.
+          </p>
+
+          {error && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+
+          {stats && (
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-lg bg-beige-light p-4">
+                <p className="text-xs text-foreground/55">Cartes expirées</p>
+                <p className="mt-1 font-display text-3xl font-medium text-foreground">{stats.count}</p>
+              </div>
+              <div className="rounded-lg bg-beige-light p-4">
+                <p className="text-xs text-foreground/55">Montant initial total</p>
+                <p className="mt-1 font-display text-3xl font-medium text-foreground">
+                  {eur(stats.totalInitial)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-beige-light p-4">
+                <p className="text-xs text-foreground/55">Solde restant total</p>
+                <p className="mt-1 font-display text-3xl font-medium text-foreground">
+                  {eur(stats.totalRemaining)}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ---------- Coque modale ---------- */
 function Modal({
   title,
@@ -607,7 +721,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           <div>
             <label className={labelCls}>Validité jusqu&apos;au</label>
             <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className={inputCls} />
-            <p className="mt-1 text-xs text-foreground/50">Laisser vide = valable 1 an (carte à usage unique).</p>
+            <p className="mt-1 text-xs text-foreground/50">Laisser vide = valable 1 an.</p>
           </div>
         </Section>
 
@@ -656,12 +770,40 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [code, setCode] = useState('')
   const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
+  const [lookup, setLookup] = useState<{ balance: number; status: string } | null>(null)
+  const [looking, setLooking] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ amount: number } | null>(null)
+  const [result, setResult] = useState<{ amount: number; balance: number; status: string } | null>(null)
 
-  // Exécute l'utilisation après confirmation dans la pop-up.
+  // Étape 1 : vérifier le solde de la carte.
+  const checkCard = async () => {
+    setLooking(true)
+    setError(null)
+    setLookup(null)
+    setResult(null)
+    try {
+      const res = await fetch('/api/gift-cards/check-balance', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ code: code.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Carte introuvable')
+      setLookup(data)
+      setAmount(String(data.balance))
+    } catch (err) {
+      setError(
+        err instanceof TypeError ? 'Connexion au serveur impossible.' : (err as Error).message
+      )
+    } finally {
+      setLooking(false)
+    }
+  }
+
+  // Étape 2 : débiter le montant (après confirmation).
   const doRedeem = async () => {
     setSaving(true)
     setError(null)
@@ -669,17 +811,22 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
       const res = await fetch('/api/gift-cards/redeem', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ code: code.trim(), description: description || undefined }),
+        body: JSON.stringify({
+          code: code.trim(),
+          amount: Number(amount),
+          description: description || undefined,
+        }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Erreur')
       setConfirming(false)
       setResult(data)
+      setLookup(null)
       onDone()
     } catch (err) {
       setError(
         err instanceof TypeError
-          ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
+          ? 'Connexion au serveur impossible. Réessayez.'
           : (err as Error).message
       )
     } finally {
@@ -687,47 +834,135 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
     }
   }
 
+  const amountNum = Number(amount)
+  const amountValid = !!lookup && amountNum > 0 && amountNum <= lookup.balance
+
   return (
-    <Modal title="Utiliser une carte" subtitle="Carte à usage unique — consommée en entier" onClose={onClose}>
+    <Modal
+      title="Utiliser une carte"
+      subtitle="Débit partiel — le solde restant reste utilisable"
+      onClose={onClose}
+    >
       <div className="space-y-4">
         <div>
           <label className={labelCls}>Code de la carte</label>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="GC-XXXX-XXXX"
-            className={cn(inputCls, 'font-mono uppercase tracking-wider')}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Note (optionnel)</label>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={200} className={inputCls} />
+          <div className="flex gap-2">
+            <input
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value.toUpperCase())
+                setLookup(null)
+                setResult(null)
+              }}
+              placeholder="GC-XXXX-XXXX"
+              className={cn(inputCls, 'font-mono uppercase tracking-wider')}
+            />
+            <button
+              onClick={checkCard}
+              disabled={looking || !code.trim()}
+              className={cn(btnOutline, 'shrink-0')}
+            >
+              {looking ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+              Vérifier
+            </button>
+          </div>
         </div>
 
-        {result && (
-          <p className="rounded-md bg-sauge/15 px-3 py-2 text-sm text-sauge-deep">
-            Carte utilisée — valeur <strong>{eur(result.amount)}</strong>.
-          </p>
+        {lookup && (
+          <>
+            <div className="rounded-lg bg-beige-light px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-foreground/60">Solde disponible</span>
+                <span className="font-display text-3xl font-medium leading-none text-foreground">
+                  {eur(lookup.balance)}
+                </span>
+              </div>
+              {lookup.status === 'expired' && (
+                <p className="mt-1.5 text-xs text-terracotta">
+                  Carte expirée — utilisable quand même en interne.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className={labelCls}>Montant à utiliser</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  max={lookup.balance}
+                  step="0.5"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className={cn(inputCls, 'pr-14')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setAmount(String(lookup.balance))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-sauge-deep hover:underline"
+                >
+                  Tout
+                </button>
+              </div>
+              {amount !== '' && !amountValid && (
+                <p className="mt-1 text-xs text-red-600">
+                  Le montant doit être entre 0 et {eur(lookup.balance)}.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className={labelCls}>Note (optionnel)</label>
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={200}
+                className={inputCls}
+                placeholder="Ex. atelier, achat céramique…"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                setError(null)
+                setConfirming(true)
+              }}
+              disabled={saving || !amountValid}
+              className={cn(btnPrimary, 'w-full')}
+            >
+              <ScanLine className="size-4" />
+              Utiliser {amountValid ? eur(amountNum) : ''}
+            </button>
+          </>
         )}
 
-        <button
-          onClick={() => {
-            setError(null)
-            setConfirming(true)
-          }}
-          disabled={saving || !code.trim() || !!result}
-          className={cn(btnPrimary, 'w-full')}
-        >
-          <ScanLine className="size-4" />
-          Utiliser la carte
-        </button>
+        {result && (
+          <div className="rounded-md bg-sauge/15 px-3 py-2.5 text-sm text-sauge-deep">
+            Débité <strong>{eur(result.amount)}</strong>.{' '}
+            {result.status === 'used' ? (
+              'Carte épuisée (solde 0).'
+            ) : (
+              <>
+                Il reste <strong>{eur(result.balance)}</strong> sur la carte.
+              </>
+            )}
+          </div>
+        )}
+
+        {error && !confirming && (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+        )}
       </div>
 
-      {confirming && (
+      {confirming && lookup && (
         <ConfirmDialog
-          title="Utiliser cette carte ?"
-          message={`La carte ${code.trim()} sera entièrement consommée (usage unique). Cette action est définitive.`}
-          confirmLabel="Utiliser la carte"
+          title="Confirmer l'utilisation ?"
+          message={`Débiter ${eur(amountNum)} de la carte ${code.trim()}. ${
+            amountNum >= lookup.balance
+              ? 'La carte sera épuisée.'
+              : `Il restera ${eur(lookup.balance - amountNum)}.`
+          }`}
+          confirmLabel="Confirmer"
           tone="primary"
           icon={ScanLine}
           loading={saving}
@@ -803,14 +1038,21 @@ function DetailModal({
   return (
     <Modal title={card.code} subtitle={`Créée le ${fmtDate(card.createdAt)} · ${card.source}`} onClose={onClose}>
       <div className="space-y-5">
-        {/* Valeur + statut (carte à usage unique) */}
+        {/* Solde restant + statut */}
         <div className="rounded-xl bg-beige-light p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-foreground/45">Valeur</p>
-              <p className="mt-1 font-display text-4xl font-medium leading-none text-foreground">
-                {eur(card.initialAmount)}
+              <p className="text-[11px] uppercase tracking-[0.18em] text-foreground/45">
+                Solde restant
               </p>
+              <p className="mt-1 font-display text-4xl font-medium leading-none text-foreground">
+                {eur(card.balance)}
+              </p>
+              {card.balance !== card.initialAmount && (
+                <p className="mt-1.5 text-xs text-foreground/50">
+                  sur {eur(card.initialAmount)} au départ
+                </p>
+              )}
             </div>
             <span
               className={cn(
@@ -822,7 +1064,8 @@ function DetailModal({
             </span>
           </div>
           <p className="mt-3 text-xs text-foreground/55">
-            Carte à usage unique{card.expiresAt ? ` · valable jusqu'au ${fmtDate(card.expiresAt)}` : ''}
+            Solde utilisable en plusieurs fois
+            {card.expiresAt ? ` · valable jusqu'au ${fmtDate(card.expiresAt)}` : ''}
           </p>
         </div>
 

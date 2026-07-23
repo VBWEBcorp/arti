@@ -101,7 +101,7 @@ export async function createGiftCard(data: CreateData, adminId: string | null = 
     imageUrl: data.imageUrl || null,
     stripePaymentIntentId: data.stripePaymentIntentId || null,
     stripeReceiptUrl: data.stripeReceiptUrl || null,
-    // Carte à usage unique, valable 1 an : expiration par défaut à +1 an.
+    // Valable 1 an (solde utilisable en plusieurs fois) : expiration par défaut à +1 an.
     expiresAt: data.expiresAt || oneYearFromNow(),
     source,
     createdByAdmin: objectIdOrNull(adminId),
@@ -160,6 +160,51 @@ export async function getAllGiftCards(
   }
 }
 
+/**
+ * Statistiques compta des cartes EXPIRÉES (date de validité dépassée), qui
+ * restent honorées : total du montant initial et du solde restant, sur une
+ * période optionnelle (filtre sur la date d'expiration). Exclut les cartes
+ * déjà utilisées ou annulées (plus de valeur en circulation).
+ */
+export async function getExpiredStats(
+  range: { from?: string | null; to?: string | null } = {}
+) {
+  await connectDB()
+  const now = new Date()
+
+  const expiresAt: Record<string, Date> = { $lt: now }
+  if (range.from) {
+    const d = new Date(range.from)
+    if (!isNaN(d.getTime())) expiresAt.$gte = d
+  }
+  if (range.to) {
+    const d = new Date(range.to)
+    if (!isNaN(d.getTime())) {
+      // Inclut toute la journée « to »
+      d.setHours(23, 59, 59, 999)
+      expiresAt.$lte = d
+    }
+  }
+
+  const [agg] = await GiftCard.aggregate([
+    { $match: { expiresAt, status: { $in: ['active', 'expired'] } } },
+    {
+      $group: {
+        _id: null,
+        count: { $sum: 1 },
+        totalInitial: { $sum: '$initialAmount' },
+        totalRemaining: { $sum: '$balance' },
+      },
+    },
+  ])
+
+  return {
+    count: agg?.count || 0,
+    totalInitial: agg?.totalInitial || 0,
+    totalRemaining: agg?.totalRemaining || 0,
+  }
+}
+
 export async function getGiftCardById(id: string): Promise<IGiftCard> {
   await connectDB()
   const giftCard = await GiftCard.findById(id)
@@ -172,18 +217,19 @@ export async function checkBalance(code: string) {
   const giftCard = await GiftCard.findOne({ code: code.toUpperCase().trim() })
   if (!giftCard) throw new GiftCardError('Carte cadeau introuvable', 404)
 
-  // Auto-expiration
+  // Marque le statut « expirée » pour l'info / la compta, MAIS la carte reste
+  // honorée (utilisable) : on ne bloque plus une carte simplement expirée.
   if (giftCard.expiresAt && giftCard.expiresAt < new Date() && giftCard.status === 'active') {
     giftCard.status = 'expired'
     await giftCard.save()
   }
 
-  if (giftCard.status !== 'active') {
-    const label =
-      giftCard.status === 'used' ? 'épuisée' : giftCard.status === 'expired' ? 'expirée' : 'annulée'
+  if (giftCard.status === 'used' || giftCard.status === 'cancelled') {
+    const label = giftCard.status === 'used' ? 'épuisée' : 'annulée'
     throw new GiftCardError(`Cette carte cadeau est ${label}`)
   }
 
+  // active OU expirée → solde renvoyé (carte toujours utilisable)
   return {
     code: giftCard.code,
     balance: giftCard.balance,
@@ -193,14 +239,17 @@ export async function checkBalance(code: string) {
 }
 
 /**
- * Utilisation sur place (staff). Carte à USAGE UNIQUE : elle est consommée en
- * entier d'un coup (pas de débit partiel ni de solde réutilisable).
- * Le passage actif -> utilisé est atomique (filtre `status: 'active'`) pour
- * empêcher une double utilisation concurrente.
+ * Utilisation sur place (staff) avec DÉBIT PARTIEL. La carte conserve son code ;
+ * on retire le montant dépensé et le solde restant reste utilisable jusqu'à
+ * épuisement (statut « épuisée » quand le solde atteint 0). Une carte expirée
+ * reste honorée (utilisable en admin) et garde son statut « expirée » tant qu'il
+ * reste du solde. Le débit est atomique (filtre sur le solde courant) pour
+ * empêcher deux débits concurrents.
  */
 export async function redeemOnSite(
   code: string,
   staffUser: { id: string; name: string },
+  amount: number,
   description: string | null = null
 ): Promise<IGiftCard> {
   await connectDB()
@@ -209,30 +258,35 @@ export async function redeemOnSite(
   const card = await GiftCard.findOne({ code: normalized })
   if (!card) throw new GiftCardError('Carte cadeau introuvable', 404)
 
-  // Auto-expiration avant utilisation.
-  if (card.status === 'active' && card.expiresAt && card.expiresAt < new Date()) {
-    card.status = 'expired'
-    await card.save()
+  if (card.status === 'used') throw new GiftCardError('Cette carte cadeau est déjà épuisée')
+  if (card.status === 'cancelled') throw new GiftCardError('Cette carte cadeau est annulée')
+  // active OU expirée → utilisable
+
+  const debit = Math.round(Number(amount) * 100) / 100
+  if (!debit || debit <= 0) {
+    throw new GiftCardError('Le montant à utiliser doit être supérieur à 0')
   }
-  if (card.status !== 'active') {
-    const label =
-      card.status === 'used' ? 'déjà utilisée' : card.status === 'expired' ? 'expirée' : 'annulée'
-    throw new GiftCardError(`Cette carte cadeau est ${label}`)
+  if (debit > card.balance) {
+    throw new GiftCardError(`Le montant dépasse le solde disponible (${eur(card.balance)})`)
   }
 
-  const value = card.balance
+  const newBalance = Math.round((card.balance - debit) * 100) / 100
+  // Épuisée si plus de solde ; validité dépassée → « expirée » (mais toujours
+  // utilisable) ; sinon « active ».
+  const isExpired = !!(card.expiresAt && card.expiresAt < new Date())
+  const newStatus = newBalance <= 0 ? 'used' : isExpired ? 'expired' : 'active'
 
-  // Flip atomique actif -> utilisé : seule la 1re requête concurrente gagne.
+  // Débit atomique : n'applique la mise à jour que si le solde n'a pas changé.
   const giftCard = await GiftCard.findOneAndUpdate(
-    { _id: card._id, status: 'active' },
+    { _id: card._id, status: { $in: ['active', 'expired'] }, balance: card.balance },
     {
-      $set: { status: 'used', balance: 0 },
+      $set: { status: newStatus, balance: newBalance },
       $push: {
         transactions: {
           type: 'redemption_on_site',
-          amount: value,
-          balanceAfter: 0,
-          description: description || 'Utilisation sur place (usage unique)',
+          amount: debit,
+          balanceAfter: newBalance,
+          description: description || `Utilisation de ${eur(debit)} sur place`,
           performedBy: { userId: objectIdOrNull(staffUser.id), name: staffUser.name },
           createdAt: new Date(),
         },
@@ -241,9 +295,9 @@ export async function redeemOnSite(
     { returnDocument: 'after' }
   )
 
-  if (!giftCard) throw new GiftCardError('Cette carte cadeau vient d\'être utilisée')
+  if (!giftCard) throw new GiftCardError('Le solde de la carte vient de changer, réessayez.')
 
-  console.log(`[giftcard] utilisée (usage unique) ${giftCard.code} — ${value}€`)
+  console.log(`[giftcard] débit ${debit}€ sur ${giftCard.code} → reste ${newBalance}€ (${newStatus})`)
   return giftCard
 }
 
@@ -429,7 +483,7 @@ function giftCardEmailHtml(opts: {
               <div style="margin-top:9px;font-family:'Courier New',Courier,monospace;font-size:25px;font-weight:700;letter-spacing:3px;color:#1f2421;">${giftCard.code}</div>
               <div style="margin:18px auto;height:1px;width:54px;background:#e0ddd4;line-height:1px;font-size:0;">&nbsp;</div>
               <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1;color:#5f6b53;">${eur(giftCard.initialAmount)}</div>
-              <div style="margin-top:12px;font-size:12px;color:#9a9f96;">Carte à usage unique${validity}</div>
+              <div style="margin-top:12px;font-size:12px;color:#9a9f96;">Valable en une ou plusieurs fois${validity}</div>
             </td></tr>
           </table>
         </td></tr>

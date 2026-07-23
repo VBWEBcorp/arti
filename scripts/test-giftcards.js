@@ -157,37 +157,62 @@ const argEmail = (process.argv.find((a) => a.startsWith('--send-email=')) || '')
     eq(e.statusCode, 404, 'statusCode')
   })
 
-  await test('checkBalance : carte expirée → auto-expiration + erreur', async () => {
+  await test('checkBalance : carte expirée → statut « expirée » mais solde renvoyé (utilisable)', async () => {
     const past = track(await giftcard.createGiftCard({ initialAmount: 15, expiresAt: new Date('2000-01-01') }))
-    await throwsWith(() => giftcard.checkBalance(past.code), 'expirée')
+    const r = await giftcard.checkBalance(past.code)
+    eq(r.balance, 15, 'solde renvoyé malgré expiration')
+    eq(r.status, 'expired', 'statut expirée')
     const reloaded = await GiftCard.findById(past._id)
-    eq(reloaded.status, 'expired', 'statut persistant après auto-expiration')
+    eq(reloaded.status, 'expired', 'statut persistant')
   })
 
   // -------------------------------------------------------------- utilisation
-  console.log('\nUtilisation sur place (usage unique)')
-  await test('redeemOnSite : actif → utilisé, solde 0, tx redemption_on_site', async () => {
-    const c = track(await giftcard.createGiftCard({ initialAmount: 40 }))
-    const used = await giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 'Café')
-    eq(used.status, 'used', 'statut')
-    eq(used.balance, 0, 'solde')
-    assert(used.transactions.some((t) => t.type === 'redemption_on_site'), 'transaction d’utilisation absente')
+  console.log('\nUtilisation sur place (débit partiel — solde réutilisable)')
+  await test('redeemOnSite : débit partiel → solde décrémenté, carte encore active', async () => {
+    const c = track(await giftcard.createGiftCard({ initialAmount: 50 }))
+    const after = await giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 30, 'Atelier')
+    eq(after.status, 'active', 'statut')
+    eq(after.balance, 20, 'solde restant')
+    assert(
+      after.transactions.some((t) => t.type === 'redemption_on_site' && t.amount === 30),
+      'transaction de débit (30€) absente'
+    )
   })
 
-  await test('redeemOnSite : seconde utilisation refusée (usage unique)', async () => {
-    const c = track(await giftcard.createGiftCard({ initialAmount: 40 }))
-    await giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' })
-    await throwsWith(() => giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }), 'déjà utilisée')
+  await test('redeemOnSite : plusieurs débits successifs jusqu’à épuisement', async () => {
+    const c = track(await giftcard.createGiftCard({ initialAmount: 50 }))
+    await giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 30)
+    const after = await giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 20)
+    eq(after.balance, 0, 'solde')
+    eq(after.status, 'used', 'statut épuisé')
+  })
+
+  await test('redeemOnSite : débit supérieur au solde refusé', async () => {
+    const c = track(await giftcard.createGiftCard({ initialAmount: 30 }))
+    await throwsWith(() => giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 50), 'dépasse')
+  })
+
+  await test('redeemOnSite : montant nul refusé', async () => {
+    const c = track(await giftcard.createGiftCard({ initialAmount: 30 }))
+    await throwsWith(() => giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 0), 'supérieur à 0')
+  })
+
+  await test('redeemOnSite : carte épuisée refusée', async () => {
+    const c = track(await giftcard.createGiftCard({ initialAmount: 20 }))
+    await giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 20)
+    await throwsWith(() => giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 5), 'épuisée')
   })
 
   await test('redeemOnSite : code inconnu → erreur 404', async () => {
-    const e = await throwsWith(() => giftcard.redeemOnSite('GC-ZZZZ-ZZZZ', { id: 'admin', name: 'Test' }), 'introuvable')
+    const e = await throwsWith(() => giftcard.redeemOnSite('GC-ZZZZ-ZZZZ', { id: 'admin', name: 'Test' }, 10), 'introuvable')
     eq(e.statusCode, 404, 'statusCode')
   })
 
-  await test('redeemOnSite : carte expirée refusée', async () => {
+  await test('redeemOnSite : carte expirée reste utilisable (débit OK, statut « expirée »)', async () => {
     const c = track(await giftcard.createGiftCard({ initialAmount: 25, expiresAt: new Date('2000-01-01') }))
-    await throwsWith(() => giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }), 'expirée')
+    const after = await giftcard.redeemOnSite(c.code, { id: 'admin', name: 'Test' }, 10)
+    eq(after.balance, 15, 'solde restant')
+    eq(after.status, 'expired', 'statut expirée conservé (solde restant)')
   })
 
   // --------------------------------------------------- annulation / réactivation

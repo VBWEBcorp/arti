@@ -52,7 +52,7 @@ export default function CarteCadeauPage() {
               souvenir grâce à la pièce qu&apos;elle aura personnalisée.
             </p>
             <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-foreground/55">
-              Carte à usage unique · valable 1 an
+              Valable en une ou plusieurs fois · 1 an
             </p>
           </div>
 
