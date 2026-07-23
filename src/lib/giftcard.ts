@@ -1,4 +1,6 @@
 import crypto from 'crypto'
+import path from 'path'
+import { readFile } from 'fs/promises'
 import mongoose from 'mongoose'
 
 import { connectDB } from '@/lib/db'
@@ -463,10 +465,13 @@ function giftCardEmailHtml(opts: {
     <tr><td align="center" style="padding:28px 14px;">
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;">
 
-        <!-- En-tête -->
-        <tr><td style="background:#7d8a6f;padding:34px 28px;text-align:center;">
-          <div style="font-family:Georgia,'Times New Roman',serif;font-size:36px;line-height:1;letter-spacing:9px;color:#ffffff;">ARTI</div>
-          <div style="margin-top:10px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e7ece1;">Carte cadeau &middot; Café céramique</div>
+        <!-- Logo ARTI (image inline, cid) -->
+        <tr><td style="background:#ffffff;padding:30px 28px 14px;text-align:center;">
+          <img src="cid:arti-logo" alt="ARTI" width="160" style="display:block;margin:0 auto;width:160px;max-width:62%;height:auto;">
+        </td></tr>
+        <!-- Bandeau vert -->
+        <tr><td style="background:#7d8a6f;padding:12px 28px;text-align:center;">
+          <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e7ece1;">Carte cadeau &middot; Café céramique</div>
         </td></tr>
 
         <!-- Intro -->
@@ -494,6 +499,13 @@ function giftCardEmailHtml(opts: {
         <tr><td style="padding:24px 32px 4px;">
           <p style="margin:0;font-size:13px;line-height:1.7;color:#7a7f78;">
             La carte complète est jointe à cet email au format PDF. Présentez ce code lors de votre venue à l'atelier ARTI.
+          </p>
+        </td></tr>
+
+        <!-- Mot de l'équipe -->
+        <tr><td style="padding:20px 32px 0;">
+          <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.7;color:#5f6b53;">
+            Toute l'équipe d'ARTI vous remercie chaleureusement et a hâte de vous accueillir à l'atelier pour un moment créatif et gourmand&nbsp;! 🎨
           </p>
         </td></tr>
 
@@ -525,12 +537,34 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;')
 }
 
+// Logo ARTI intégré comme image inline (cid) dans les emails. Lu une seule fois
+// puis mis en cache. Même mécanisme fiable que le template PDF (public/brand).
+const ARTI_LOGO_PATH = path.join(process.cwd(), 'public', 'brand', 'logo-arti.png')
+let cachedLogoB64: string | null = null
+async function getArtiLogoBase64(): Promise<string | null> {
+  if (cachedLogoB64 !== null) return cachedLogoB64 || null
+  try {
+    const buf = await readFile(ARTI_LOGO_PATH)
+    cachedLogoB64 = buf.toString('base64')
+    return cachedLogoB64
+  } catch (err) {
+    console.error("[giftcard] logo ARTI introuvable pour l'email:", (err as Error).message)
+    cachedLogoB64 = '' // marque comme « tenté » pour ne pas relire à chaque envoi
+    return null
+  }
+}
+
 /** Envoi des emails de carte cadeau (acheteur + destinataire) via Resend. */
 async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
-  // On remplit le visuel officiel (PDF : recto illustré + verso avec numéro,
-  // montant et date de validité) et on le joint à l'email. Échec de rendu non
-  // bloquant : l'email part quand même avec le code et la validité en texte.
-  let attachments: EmailAttachment[] | undefined
+  // Pièces jointes : logo ARTI (image inline via cid) + carte au format PDF.
+  // Échec de rendu non bloquant : l'email part quand même avec le code en texte.
+  const attachments: EmailAttachment[] = []
+
+  const logo = await getArtiLogoBase64()
+  if (logo) {
+    attachments.push({ filename: 'arti-logo.png', content: logo, contentId: 'arti-logo' })
+  }
+
   try {
     const pdf = await renderGiftCardPdf({
       code: giftCard.code,
@@ -539,12 +573,10 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
       recipientName: giftCard.recipient?.name,
       message: giftCard.recipient?.message,
     })
-    attachments = [
-      {
-        filename: `carte-cadeau-${giftCard.code}.pdf`,
-        content: pdf.toString('base64'),
-      },
-    ]
+    attachments.push({
+      filename: `carte-cadeau-${giftCard.code}.pdf`,
+      content: pdf.toString('base64'),
+    })
   } catch (err) {
     console.error('[giftcard] rendu PDF carte échoué:', (err as Error).message)
   }
