@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 
 import { ContactForm } from '@/components/arti/contact-form'
+import { FaqAccordion } from '@/components/arti/faq-accordion'
 import { InfoCards } from '@/components/arti/info-cards'
-import { infosDefaults } from '@/lib/content-defaults'
+import { faqDefaults, infosDefaults } from '@/lib/content-defaults'
 import { getPageContent } from '@/lib/page-content'
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function InfosPratiquesPage() {
   const infos = await getPageContent('infos-pratiques', infosDefaults)
+  const faq = await getPageContent('faq', faqDefaults)
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(infos.hero.mapQuery)}&output=embed`
 
   return (
@@ -47,6 +49,27 @@ export default async function InfosPratiquesPage() {
 
       {/* 3 cards Adresse / Contact / Horaires */}
       <InfoCards />
+
+      {/* FAQ (même contenu que la page FAQ, éditable au même endroit dans l'admin) */}
+      <section className="bg-beige-light py-20 sm:py-24">
+        <div className="mx-auto max-w-3xl px-6 text-center sm:px-10">
+          <p className="text-xs font-medium uppercase tracking-[0.28em] text-sauge-deep">
+            {faq.eyebrow}
+          </p>
+          <h2 className="mt-3 font-display text-5xl font-medium text-foreground sm:text-6xl">
+            {faq.title}
+          </h2>
+          {faq.intro && (
+            <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-foreground/75">
+              {faq.intro}
+            </p>
+          )}
+
+          <div className="mt-12 text-left">
+            <FaqAccordion items={faq.items} />
+          </div>
+        </div>
+      </section>
 
       {/* CONTACT */}
       <section id="reserver" className="scroll-mt-24 bg-white pb-20 sm:pb-24">

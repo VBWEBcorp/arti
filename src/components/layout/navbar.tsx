@@ -106,10 +106,11 @@ export function Navbar() {
           <Logo size="lg" />
         </div>
 
-        {/* CTA Réserver à droite — lettrage serif fin (façon logo ARTI), en vert */}
+        {/* CTA Réserver à droite — même police que les titres (Caveat), en vert */}
         <Link
           href="/infos-pratiques#reserver"
-          className="font-serif inline-flex h-10 items-center justify-center rounded-sm border border-sauge bg-sauge px-6 text-base font-normal uppercase tracking-[0.16em] text-white transition-colors hover:border-sauge-deep hover:bg-sauge-deep"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 400 }}
+          className="inline-flex h-10 items-center justify-center rounded-sm bg-sauge px-6 text-2xl leading-none text-white transition-colors hover:bg-sauge-deep"
         >
           Réserver
         </Link>
