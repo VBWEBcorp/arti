@@ -11,56 +11,133 @@ type Review = {
   text: string
 }
 
-// Vrais avis Google (widget Trustindex du site articafeceramique.fr).
+// Vrais avis Google d'ARTI Café Céramique (note globale 4,9/5 · 95 avis).
 const reviews: Review[] = [
   {
-    name: 'Apolline Lesage',
-    when: 'il y a 8 mois',
-    initial: 'A',
+    name: 'Imen FC',
+    when: 'il y a 2 mois',
+    initial: 'I',
     color: 'bg-[#1A73E8]',
-    text: "Super expérience !! La personne qui nous a accueillies était au top, disponible pour répondre aux questions et nous donner des conseils. L'ambiance est très sympa, on s'y sent bien et tout est réuni pour créer de belles céramiques.",
+    text: "Nous y avons passé une super matinée ! Les filles sont très sympas, beaucoup de choix en termes de céramique et c'était plutôt calme quand nous y sommes allées ! C'était parfait !",
   },
   {
-    name: 'Cynthia LACARRERE',
-    when: 'il y a 8 mois',
-    initial: 'C',
+    name: 'Marine Lebreton',
+    when: 'il y a 1 mois',
+    initial: 'ML',
     color: 'bg-[#7E57C2]',
-    text: "Nous avons passé un excellent moment dans ce café céramique. L'accueil est chaleureux et nous nous y sommes bien senties.",
+    text: "Première fois dans cette expérience d'art, personnel très gentil et à l'écoute de nos questions.",
+  },
+  {
+    name: 'Sarah Galon',
+    when: 'il y a 6 mois',
+    initial: 'SG',
+    color: 'bg-[#5C6BC0]',
+    text: "Une expérience créative et conviviale dans un lieu vraiment unique ! L'atelier est super cosy et inspirant, parfait pour se détendre et s'exprimer.",
+  },
+  {
+    name: 'J. Duverger',
+    when: 'il y a 7 mois',
+    initial: 'JD',
+    color: 'bg-[#26A69A]',
+    text: "Complètement Arti-addict ! Depuis que j'ai découvert ce café, j'y entraîne tous mes ami·es et m'y retrouve toutes les deux semaines.",
+  },
+  {
+    name: 'Ines Le Gal',
+    when: 'il y a 7 mois',
+    initial: 'IL',
+    color: 'bg-[#E89A6A]',
+    text: "Une super activité ! Le lieu est magnifique : très bien décoré, cosy, avec de jolies pièces.",
+  },
+  {
+    name: 'Angel Ange',
+    when: 'il y a 4 mois',
+    initial: 'A',
+    color: 'bg-[#D04A78]',
+    text: "Un moment exquis. L'activité est géniale et les filles sont d'une gentillesse… ça donne envie de revenir faire d'autres œuvres très vite ! Merci pour cet agréable moment ❤️",
+  },
+  {
+    name: 'Marion',
+    when: 'il y a 1 an',
+    initial: 'M',
+    color: 'bg-[#6A8FE8]',
+    text: "Ma sœur et moi avons passé un super après-midi. On oublie tout, on se déconnecte et on se détend dans un très beau lieu apaisant décoré avec beaucoup de goût.",
+  },
+  {
+    name: 'Mathilde Thoma',
+    when: 'il y a 1 an',
+    initial: 'MT',
+    color: 'bg-[#00897B]',
+    text: "Je suis absolument ravie de mon expérience chez Arti Café Céramique ! L'endroit est magnifique, l'ambiance est à la fois cosy et inspirante.",
+  },
+  {
+    name: 'Anne',
+    when: 'il y a 1 an',
+    initial: 'A',
+    color: 'bg-[#8E24AA]',
+    text: "J'ai adoré ! Arti offre une énergie douce et apaisante qui invite à la détente et surtout, à l'inspiration. Un endroit parfait pour se ressourcer.",
+  },
+  {
+    name: 'Ninon Chapin',
+    when: 'il y a 6 mois',
+    initial: 'NC',
+    color: 'bg-[#3949AB]',
+    text: "Le café céramique est génial. Nous avons passé un super moment en famille dans cet endroit cosy. Le personnel est vraiment à l'écoute et aux petits soins. Je recommande fortement.",
+  },
+  {
+    name: 'Isabelle Commien',
+    when: 'il y a 10 mois',
+    initial: 'IC',
+    color: 'bg-[#039BE5]',
+    text: "Je recommande le café céramique Arti pour un moment créatif dans la sérénité. Le lieu et l'équipe sont très agréables. Un beau moment intergénérationnel.",
+  },
+  {
+    name: 'Léna Bohant',
+    when: 'il y a 1 an',
+    initial: 'LB',
+    color: 'bg-[#43A047]',
+    text: "Il est difficile de critiquer cet endroit, alors qu'il est un vrai lieu de sérénité, de bienveillance et de créativité. Nous avons été très bien accueillis.",
+  },
+  {
+    name: 'Lily-Rose Le Maout',
+    when: 'il y a 7 mois',
+    initial: 'LL',
+    color: 'bg-[#FB8C00]',
+    text: "Très bonne ambiance, les filles sont accueillantes et souriantes. Petit clin d'œil à Jasmine qui est adorable et qui a su nous épauler tout au long de l'atelier !",
+  },
+  {
+    name: 'Charlène Attal',
+    when: 'il y a 1 an',
+    initial: 'CA',
+    color: 'bg-[#C0392B]',
+    text: "J'ai passé 2 heures de pure détente chez Arti Café avec mes deux filles de 6 et 9 ans, et nous avons toutes les trois adoré cette expérience !",
+  },
+  {
+    name: 'Maéva Turpin',
+    when: 'il y a 1 an',
+    initial: 'MT',
+    color: 'bg-[#5E35B1]',
+    text: "Une visite de plus chez Arti café, et toujours un grand plaisir ! L'ambiance, le choix de céramiques qui évolue au fil du temps, et l'accueil au top.",
+  },
+  {
+    name: 'Camille Poitte',
+    when: 'il y a 1 an',
+    initial: 'CP',
+    color: 'bg-[#1A73E8]',
+    text: "Très bonne première expérience de peinture sur céramique ! Les explications sont claires et concises et le choix des céramiques est plutôt large ! 2h hors du temps.",
+  },
+  {
+    name: 'Apolline Lesage',
+    when: 'il y a 10 mois',
+    initial: 'AL',
+    color: 'bg-[#7E57C2]',
+    text: "Super expérience !! La personne qui nous a accueillies était au top, disponible pour répondre aux questions et nous donner des conseils. L'ambiance est très sympa.",
   },
   {
     name: 'Fiona Hbrt',
-    when: 'il y a 9 mois',
-    initial: 'F',
-    color: 'bg-[#5C6BC0]',
-    text: "Nous avons passé un très bon moment entre filles en famille à Arti Café. Le cadre est agréable et paisible, la playlist excellente et à un volume modéré, juste ce qu'il faut, la gérante très souriante et d'une grande douceur. Les explications sont claires, le matériel en quantité suffisante.",
-  },
-  {
-    name: 'Lilou PDP',
-    when: 'il y a 9 mois',
-    initial: 'L',
-    color: 'bg-[#26A69A]',
-    text: "Super concept, je suis fan du résultat final 🤩 J'ai adoré le moment passé avec mon amie, l'endroit et l'ambiance chaleureuse.",
-  },
-  {
-    name: 'Fanette Herisse',
-    when: 'il y a 4 mois',
+    when: 'il y a 10 mois',
     initial: 'FH',
-    color: 'bg-[#E89A6A]',
-    text: 'Parfait. Un moment unique 🙂',
-  },
-  {
-    name: 'Fleur',
-    when: 'il y a 7 mois',
-    initial: 'F',
-    color: 'bg-[#6A8FE8]',
-    text: 'Super expérience ! Beaucoup de choix de céramique selon les saisons !',
-  },
-  {
-    name: 'Margaux B',
-    when: 'il y a 4 mois',
-    initial: 'MB',
-    color: 'bg-[#D04A78]',
-    text: 'Super expérience de peinture sur céramique, nous recommandons chaudement ! La personne qui nous accueille est extrêmement gentille et disponible. Le café est également très bon.',
+    color: 'bg-[#26A69A]',
+    text: "Nous avons passé un très bon moment entre filles en famille à Arti Café. Le cadre est agréable et paisible, la playlist excellente et à un volume modéré.",
   },
 ]
 
@@ -139,6 +216,25 @@ export function Reviews() {
         <h2 className="mt-4 text-center font-display text-5xl font-medium text-foreground sm:text-6xl">
           Découvrez les avis clients
         </h2>
+
+        {/* Note globale Google */}
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-5xl font-medium leading-none text-foreground">4,9</span>
+            <span className="text-lg text-foreground/45">/ 5</span>
+          </div>
+          <div className="flex items-center gap-1 text-[#F5B544]">
+            {Array.from({ length: 5 }).map((_, s) => (
+              <Star key={s} className="size-5 fill-current" strokeWidth={0} />
+            ))}
+          </div>
+          <p className="flex items-center gap-2 text-sm text-foreground/60">
+            <GoogleG className="size-4" />
+            <span>
+              <strong className="font-semibold text-foreground/80">95 avis</strong> sur Google
+            </span>
+          </p>
+        </div>
       </div>
 
       <div className="relative mt-14">
