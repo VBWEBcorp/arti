@@ -9,14 +9,14 @@ export default function AdminAccueilPage() {
     <PageEditor pageId="home" title="Page Accueil" defaultContent={homeDefaults}>
       {(content, update) => (
         <>
-          <SectionEditor title="Bandeau d'accueil (hero)">
+          <SectionEditor title="Mot de présentation (bandeau d'accueil)">
             <FieldEditor
-              label="Accroche"
+              label="Titre 1 (accroche)"
               value={content.hero?.eyebrow}
               onChange={(v) => update('hero.eyebrow', v)}
             />
             <FieldEditor
-              label="Titre"
+              label="Titre 2 (grand titre)"
               value={content.hero?.title}
               onChange={(v) => update('hero.title', v)}
             />
@@ -32,6 +32,12 @@ export default function AdminAccueilPage() {
               onChange={(v) => update('hero.paragraph2', v)}
               type="textarea"
             />
+            <FieldEditor
+              label="Paragraphe 3"
+              value={content.hero?.paragraph3}
+              onChange={(v) => update('hero.paragraph3', v)}
+              type="textarea"
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <FieldEditor
                 label="Libellé du bouton"
@@ -45,40 +51,45 @@ export default function AdminAccueilPage() {
               />
             </div>
             <ImageField
-              label="Image du hero"
+              label="Image du bandeau"
               value={content.hero?.image}
               onChange={(v) => update('hero.image', v)}
             />
           </SectionEditor>
 
-          <SectionEditor title="Notre équipe">
+          <SectionEditor title="Le mot de la Fondatrice (Chloé)">
             <FieldEditor
               label="Titre"
-              value={content.equipe?.title}
-              onChange={(v) => update('equipe.title', v)}
+              value={content.fondatrice?.title}
+              onChange={(v) => update('fondatrice.title', v)}
             />
             <FieldEditor
               label="Paragraphe 1"
-              value={content.equipe?.paragraph1}
-              onChange={(v) => update('equipe.paragraph1', v)}
+              value={content.fondatrice?.paragraph1}
+              onChange={(v) => update('fondatrice.paragraph1', v)}
               type="textarea"
             />
             <FieldEditor
               label="Paragraphe 2"
-              value={content.equipe?.paragraph2}
-              onChange={(v) => update('equipe.paragraph2', v)}
+              value={content.fondatrice?.paragraph2}
+              onChange={(v) => update('fondatrice.paragraph2', v)}
               type="textarea"
             />
             <FieldEditor
               label="Paragraphe 3"
-              value={content.equipe?.paragraph3}
-              onChange={(v) => update('equipe.paragraph3', v)}
+              value={content.fondatrice?.paragraph3}
+              onChange={(v) => update('fondatrice.paragraph3', v)}
               type="textarea"
             />
+            <FieldEditor
+              label="Signature"
+              value={content.fondatrice?.signature}
+              onChange={(v) => update('fondatrice.signature', v)}
+            />
             <ImageField
-              label="Photo de l'équipe"
-              value={content.equipe?.image}
-              onChange={(v) => update('equipe.image', v)}
+              label="Photo (Chloé / l'équipe)"
+              value={content.fondatrice?.image}
+              onChange={(v) => update('fondatrice.image', v)}
             />
           </SectionEditor>
         </>

@@ -53,6 +53,7 @@ export default async function ArtiCeramiquesPage() {
               <div className="mt-6 space-y-4 text-sm leading-relaxed text-foreground/85">
                 <p>{c.hero.paragraph1}</p>
                 <p>{c.hero.paragraph2}</p>
+                <p>{c.hero.paragraph3}</p>
               </div>
             </div>
           </div>

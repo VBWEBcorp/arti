@@ -1,37 +1,14 @@
 import Image from 'next/image'
 
-const steps = [
-  {
-    n: '1',
-    title: 'Choisissez',
-    icon: '/brand/tasse-icone.png',
-    body:
-      "En arrivant, l'équipe d'Arti prendra quelques minutes pour vous donner toutes les explications nécessaires sur la peinture, les techniques et le matériel puis c'est parti ! Vous pourrez choisir la céramique de votre choix parmi une large sélection de pièces : bol, tasse, vase, assiette, coquetier…",
-  },
-  {
-    n: '2',
-    title: 'Décorez',
-    icon: '/brand/pot-icone.png',
-    body:
-      "A vos pinceaux ! Choisissez vos couleurs et laissez libre court à votre créativité. Si les idées venaient à vous manquer, un carnet d'inspiration sera à votre disposition pour vous permettre de réaliser les plus jolies des créations.",
-  },
-  {
-    n: '3',
-    title: 'Patientez',
-    icon: '/brand/verre-icone.png',
-    body:
-      "A la fin de votre atelier, nous récupérons votre pièce afin de l'émailler et la cuire dans notre four à haute température (1 000°C). Cela révèlera les couleurs et la rendra étanche !",
-  },
-  {
-    n: '4',
-    title: 'Récupérez',
-    icon: '/brand/potettasse-icone.png',
-    body:
-      'Environ 3 semaines plus tard, vous pourrez passer au café pour découvrir et récupérer votre création.',
-  },
-] as const
+import { conceptStepsDefaults, type ConceptStep } from '@/lib/content-defaults'
 
-export function ConceptSteps({ title = 'Le concept' }: { title?: string }) {
+export function ConceptSteps({
+  title = 'Le Concept',
+  steps = conceptStepsDefaults,
+}: {
+  title?: string
+  steps?: ConceptStep[]
+}) {
   return (
     <section className="bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-6 sm:px-10">

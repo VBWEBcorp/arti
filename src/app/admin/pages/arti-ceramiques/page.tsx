@@ -58,6 +58,12 @@ export default function AdminArtiCeramiquesPage() {
                 onChange={(v) => update('hero.paragraph2', v)}
                 type="textarea"
               />
+              <FieldEditor
+                label="Paragraphe 3"
+                value={content.hero?.paragraph3}
+                onChange={(v) => update('hero.paragraph3', v)}
+                type="textarea"
+              />
               <div className="grid gap-4 sm:grid-cols-2">
                 <ImageField
                   label="Image 1"

@@ -5,26 +5,31 @@
  */
 
 export const homeDefaults = {
+  // Mot de présentation
   hero: {
     eyebrow: 'Bienvenue chez Arti',
-    title: 'Le café céramique au cœur de Rennes !',
+    title: 'Le café céramique au cœur de Rennes',
     paragraph1:
-      "ARTI est un coffee shop cosy et inspirant où l'on peint sa propre céramique tout en savourant une boisson et un bon goûter. Le temps d'un atelier, choisissez votre pièce, décorez-la à votre goût et repartez avec une création unique, faite de vos mains.",
+      "Arti est un café céramique pensé comme un lieu de partage, de créativité et de détente. Dans une ambiance chaleureuse, inspirée par l'artisanat, chacun est invité à prendre le temps de créer tout en savourant un café, une pâtisserie.",
     paragraph2:
-      "Pas besoin d'être artiste : la peinture sur céramique est ouverte à tous. Débutant ou confirmé, petit ou grand, chacun trouve sa place et réveille son âme d'artiste !",
-    buttonLabel: 'Je réserve',
+      "Le temps d'un atelier, choisissez votre pièce, décorez-là à votre goût et repartez avec une création unique faite de vos mains.",
+    paragraph3:
+      "Que vous soyez un artiste confirmé ou que vous n'ayez jamais tenu un pinceau, Arti est ouvert à tous ! Notre équipe sera présente pour vous accompagner et vous faire découvrir les différentes techniques de peinture sur céramique.",
+    buttonLabel: 'Réserver',
     buttonHref: '/infos-pratiques#reserver',
     image: '/brand/hero-cafe.png',
   },
-  equipe: {
-    title: 'Notre équipe',
+  // Mot de la Fondatrice (remplace l'ancienne section « Notre équipe »)
+  fondatrice: {
+    title: "Le mot de Chloé, Fondatrice d'Arti",
     image: '/brand/equipe.png',
     paragraph1:
-      'Chez Arti, Chloé, Anne et Jasmine vous accueilleront lors de vos ateliers pour vous faire vivre un moment créatif et relaxant !',
+      "Arti est né d'un mélange entre deux passions, l'hospitalité et l'artisanat. Je suis donc ravie de vous accueillir aujourd'hui, avec mon équipe, dans ce lieu pensé pour vous inspirer, laisser libre court à votre créativité, mais aussi vous ressourcer.",
     paragraph2:
-      "Nous mettons tout notre cœur à vous accompagner dans la réalisation de votre pièce, que vous veniez peindre pour le plaisir, pour offrir ou simplement pour vous détendre. Nous aimons partager nos conseils et nos idées pour que chaque atelier soit une belle expérience, pleine de bonne humeur et de créativité.",
+      "J'ai à cœur de sélectionner de jolies céramiques, utilitaires et dans le respect du savoir-faire artisanal pour faire, ensuite, partie de votre quotidien.",
     paragraph3:
-      "Chez nous, pas besoin d'être artiste : on vous guide pas à pas, toujours avec le sourire !",
+      "J'espère que l'expérience vous plaira, et que ce moment suspendu, de partage, vous laissera un souvenir mémorable !",
+    signature: 'Chloé',
   },
 }
 
@@ -97,80 +102,78 @@ export const faqDefaults = {
 
 export type ConceptStep = { n: string; title: string; icon: string; body: string }
 
+/** Les 4 étapes du concept — identiques sur l'accueil et sur « Le Concept ». */
+export const conceptStepsDefaults: ConceptStep[] = [
+  {
+    n: '1',
+    title: 'Choisissez',
+    icon: '/brand/tasse-icone.png',
+    body:
+      "En arrivant, l'équipe d'Arti prendra quelques minutes pour vous donner toutes les explications nécessaires sur la peinture, les techniques et le matériel puis c'est parti ! Vous pourrez choisir la céramique de votre choix parmi une large sélection de pièces : bol, tasse, vase, assiette, coquetier…",
+  },
+  {
+    n: '2',
+    title: 'Décorez',
+    icon: '/brand/pot-icone.png',
+    body:
+      "A vos pinceaux ! Choisissez vos couleurs et laissez libre court à votre créativité pendant 2h30 d'atelier. Si les idées vous manquent, un carnet d'inspiration et des pochoirs seront à votre disposition pour réaliser les plus belles créations.",
+  },
+  {
+    n: '3',
+    title: 'Patientez',
+    icon: '/brand/verre-icone.png',
+    body:
+      "A la fin de votre atelier, notre équipe récupère votre pièce afin de l'émailler et la cuire dans notre four à haute température (1000°C). Cela permet de révéler les couleurs et la rendre étanche !",
+  },
+  {
+    n: '4',
+    title: 'Récupérer',
+    icon: '/brand/potettasse-icone.png',
+    body:
+      'Vous pourrez récupérer et découvrir votre pièce quelques semaines plus tard, selon le délai indiqué par notre équipe à la fin de votre atelier.',
+  },
+]
+
 export const leConceptDefaults = {
+  // Mot de présentation — identique à la page d'accueil.
   hero: {
-    title: 'Arti est un coffee shop et un atelier de peinture sur céramique.',
+    eyebrow: 'Bienvenue chez Arti',
+    title: 'Le café céramique au cœur de Rennes',
     paragraph1:
-      'Vous retrouverez chez ARTI, une jolie sélection de cafés, thés et boissons fraîches ainsi que des gâteaux pour les gourmands !',
+      "Arti est un café céramique pensé comme un lieu de partage, de créativité et de détente. Dans une ambiance chaleureuse, inspirée par l'artisanat, chacun est invité à prendre le temps de créer tout en savourant un café, une pâtisserie.",
     paragraph2:
-      'Notre café est torréfié en Bretagne, à Saint-Thuriau, par Café 1802. Nous avons à cœur de travailler avec des produits locaux.',
-    buttonLabel: 'Voir la carte',
-    buttonHref: '/carte',
-    image: '/brand/concept-etagere.png',
-    imageSecondary: '/brand/concept-devanture.png',
-  },
-  intro: {
-    icon: '/brand/vase-icone.png',
-    title: 'Vous souhaitez découvrir la peinture sur céramique ?',
-    text:
-      "Arti vous propose un moment hors du temps, 2H30 d'atelier, pour personnaliser la pièce en céramique de votre choix. Comment cela fonctionne ?",
-  },
-  steps: [
-    {
-      n: '1',
-      title: 'Choisissez',
-      icon: '/brand/tasse-icone.png',
-      body:
-        "En arrivant, l'équipe d'Arti prendra quelques minutes pour vous donner toutes les explications nécessaires sur la peinture, les techniques et le matériel puis c'est parti ! Vous pourrez choisir la céramique de votre choix parmi une large sélection de pièces : bol, tasse, vase, assiette, coquetier…",
-    },
-    {
-      n: '2',
-      title: 'Décorez',
-      icon: '/brand/pot-icone.png',
-      body:
-        "A vos pinceaux ! Choisissez vos couleurs et laissez libre court à votre créativité. Si les idées venaient à vous manquer, un carnet d'inspiration sera à votre disposition pour vous permettre de réaliser les plus jolies des créations.",
-    },
-    {
-      n: '3',
-      title: 'Patientez',
-      icon: '/brand/verre-icone.png',
-      body:
-        "A la fin de votre atelier, nous récupérons votre pièce afin de l'émailler et la cuire dans notre four à haute température (1 000°C). Cela révèlera les couleurs et la rendra étanche !",
-    },
-    {
-      n: '4',
-      title: 'Récupérez',
-      icon: '/brand/potettasse-icone.png',
-      body:
-        'Environ 3 semaines plus tard, vous pourrez passer au café pour découvrir et récupérer votre création.',
-    },
-  ] as ConceptStep[],
-  howItWorks: {
-    title: 'Comment ça marche ?',
-    paragraph1:
-      'Au début de votre atelier, notre équipe prendra 10 minutes pour vous expliquer toutes les techniques et le matériel que vous pourrez utiliser. Nous serons là tout au long de votre atelier pour vous accompagner dans la réalisation de vos créations.',
-    paragraph2:
-      'Afin de préparer au mieux votre venue, vous pouvez sélectionner des inspirations et idées de réalisations.',
-    paragraph3: "Pour cela, nous avons créé un tableau Pinterest avec plein d'idées.",
-    buttonLabel: '📌 Découvrir les inspirations',
-    buttonHref: 'https://fr.pinterest.com/articafeceramique/inspirations/',
-  },
-  apercu: {
-    title: 'Un aperçu du coffee shop',
-    buttonLabel: 'Voir la carte',
-    buttonHref: '/carte',
-    image1: '/brand/apercu-2.png',
-    image2: '/brand/apercu-1.png',
-    image3: '/brand/apercu-3.png',
-  },
-  partenaires: {
-    title: 'Nos partenaires locaux',
-    paragraph1:
-      'Pour le café, nous travaillons avec Café 1802. Fred et Renaud, barista et torréfacteur, sélectionnent des cafés de spécialité issus du commerce équitable et les torréfient en Bretagne, à Saint-Thuriau. Des recettes uniques, à découvrir tasse après tasse.',
-    paragraph2:
-      'Côté gourmandise, nos pâtisseries viennent de Bonœuf : des cookies généreux, 100 % végétaux, fabriqués juste à côté de Rennes.',
+      "Le temps d'un atelier, choisissez votre pièce, décorez-là à votre goût et repartez avec une création unique faite de vos mains.",
     paragraph3:
-      "Travailler avec des producteurs locaux, c'est notre façon de vous offrir le meilleur tout en soutenant le savoir-faire d'ici.",
+      "Que vous soyez un artiste confirmé ou que vous n'ayez jamais tenu un pinceau, Arti est ouvert à tous ! Notre équipe sera présente pour vous accompagner et vous faire découvrir les différentes techniques de peinture sur céramique.",
+    buttonLabel: 'Réserver',
+    buttonHref: '/infos-pratiques#reserver',
+    image: '/brand/hero-cafe.png',
+  },
+  steps: conceptStepsDefaults,
+  pourQui: {
+    title: 'Des ateliers pour tous',
+    paragraph1:
+      "Que vous veniez seul(e) vous offrir une parenthèse de calme ou partager un moment suspendu à plusieurs, Arti est un lieu de vie et de création ouvert à tous ! Les enfants y sont les bienvenus aussi, nous conseillons les ateliers à partir de 5 ans pour explorer leur créativité en toute simplicité.",
+    paragraph2:
+      "Aucun prérequis artistique n'est nécessaire, notre équipe sera présente pour tout vous expliquer ! L'expérience invite simplement à lâcher prise, à expérimenter à son rythme et à savourer le plaisir de faire de ses mains.",
+    paragraph3:
+      "L'équipe d'Arti vous accueille et vous guide avec attention, vous transmettant les techniques essentielles de la peinture sur céramique et vous accompagnant selon vos envies. Des sources d'inspiration sont à votre disposition pour vous aider à vous lancer en toute confiance.",
+    paragraph4:
+      "Avant votre venue, nous vous recommandons de sélectionner quelques inspirations. Arti vous a créé un tableau Pinterest avec plein d'idées :",
+    buttonLabel: 'Découvrir les inspirations Pinterest',
+    buttonHref: 'https://fr.pinterest.com/articafeceramique/inspirations/',
+    image: '/brand/concept-etagere.png',
+  },
+  cafe: {
+    title: 'Une sélection gourmande pour accompagner votre atelier',
+    paragraph1:
+      'Notre carte évolue au fil des saisons afin de proposer des créations gourmandes, fraîches et adaptées aux envies du moment.',
+    paragraph2:
+      "Nous choisissons de travailler avec des fournisseurs engagés, partageant notre vision de la qualité, de la proximité et du respect des savoir-faire. Nous privilégions autant que possible les collaborations avec des producteurs et artisans locaux, afin de valoriser des produits authentiques et de créer des liens durables avec ceux qui les font naître.",
+    paragraph3:
+      "Parmi nos gourmandises, vous retrouverez notamment nos cookies véganes, pensés pour allier générosité, créativité et plaisir, pour que chacun puisse profiter d'une pause gourmande adaptée à ses envies.",
+    buttonLabel: 'Voir la carte',
+    buttonHref: '/carte',
     image: '/brand/partenaires.png',
   },
 }
@@ -188,9 +191,11 @@ export const artiCeramiquesDefaults = {
   hero: {
     title: 'Les céramiques',
     paragraph1:
-      "Chez Arti, chaque pièce est choisie avec soin. Nous collaborons exclusivement avec des céramistes français : une sélection intemporelle disponible toute l'année, complétée de pièces de saison.",
+      "Nos pièces en céramique sont soigneusement sélectionnées auprès de manufactures familiales françaises reconnues pour leur savoir-faire artisanal et leur exigence de qualité. Issues principalement de Vallauris et de Lyon, deux territoires emblématiques de la céramique en France, elles reflètent un travail précis, des finitions soignées et un héritage de fabrication transmis au fil des générations.",
     paragraph2:
-      'Privilégier le Made in France, c\'est soutenir des ateliers d\'ici, valoriser un savoir-faire artisanal et vous offrir des céramiques durables, pensées pour durer. Une quarantaine de modèles vous attendent — tasses, bols, assiettes, pichets, vases, théières, beurriers, pots à crayons — de 15 € à 50 € selon la taille de la pièce.',
+      "Nous choisissons chaque pièce avec attention auprès de partenaires qui partagent nos valeurs : la préservation des savoir-faire locaux, une démarche plus responsable et une recherche constante d'excellence. Chaque création proposée dans notre sélection incarne ainsi l'alliance entre authenticité, élégance et qualité durable. Chez Arti, vous retrouverez majoritairement une sélection de jolis objets utilitaires.",
+    paragraph3:
+      "Nous avons également à cœur de valoriser la création locale à travers un partenariat de longue date avec la céramiste rennaise Camille Esnée. Ensemble, nous imaginons et dessinons des pièces exclusives, pensées pour notre café et réalisées avec la sensibilité et le savoir-faire d'une artisane passionnée.",
     image1: '/brand/atelier-3.png',
     image2: '/brand/ceramiques-2.png',
   },

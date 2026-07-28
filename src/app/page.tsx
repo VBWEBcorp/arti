@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 
-import { ArtiButton } from '@/components/arti/arti-button'
 import { ConceptSteps } from '@/components/arti/concept-steps'
 import { CreationsCarousel } from '@/components/arti/creations-carousel'
 import { EventsCta } from '@/components/arti/events-cta'
 import { InfoCards } from '@/components/arti/info-cards'
+import { PresentationHero } from '@/components/arti/presentation-hero'
 import { Reviews } from '@/components/arti/reviews'
 import {
   localBusinessJsonLd,
@@ -34,7 +34,7 @@ const jsonLd = {
 }
 
 export default async function HomePage() {
-  const { hero, equipe } = await getPageContent('home', homeDefaults)
+  const { hero, fondatrice } = await getPageContent('home', homeDefaults)
 
   return (
     <>
@@ -43,45 +43,8 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* HERO — Bienvenue chez ARTI */}
-      <section className="bg-white">
-        <div className="grid items-stretch gap-0 md:grid-cols-2">
-          {/* Colonne gauche : bloc sauge + photo insérée qui déborde légèrement */}
-          <div className="relative z-20 flex items-center bg-sauge px-6 py-12 sm:px-10 sm:py-16 md:px-0 md:py-24">
-            <div className="mx-auto w-full max-w-[600px] md:mx-0 md:ml-[16%] md:w-[82%] md:max-w-none md:translate-x-[6%]">
-              <Image
-                src={hero.image}
-                alt="Intérieur du café ARTI à Rennes"
-                width={1000}
-                height={900}
-                priority
-                className="h-auto w-full shadow-2xl"
-              />
-            </div>
-          </div>
-
-          {/* Colonne droite : fond blanc + texte */}
-          <div className="flex items-center bg-white px-6 py-16 sm:px-12 md:py-24 lg:pl-28 lg:pr-16">
-            <div className="max-w-xl">
-              <p className="text-xs font-medium uppercase tracking-[0.28em] text-sauge-deep">
-                {hero.eyebrow}
-              </p>
-              <h1 className="mt-5 font-display text-6xl font-medium leading-[1.05] text-foreground lg:text-7xl">
-                {hero.title}
-              </h1>
-              <div className="mt-6 space-y-4 text-sm leading-relaxed text-foreground/85 text-justify">
-                <p>{hero.paragraph1}</p>
-                <p>{hero.paragraph2}</p>
-              </div>
-              <div className="mt-8">
-                <ArtiButton href={hero.buttonHref} variant="sauge">
-                  {hero.buttonLabel}
-                </ArtiButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* MOT DE PRÉSENTATION */}
+      <PresentationHero content={hero} />
 
       {/* LE CONCEPT (4 étapes) */}
       <ConceptSteps />
@@ -89,14 +52,14 @@ export default async function HomePage() {
       {/* VOS CRÉATIONS */}
       <CreationsCarousel />
 
-      {/* NOTRE ÉQUIPE */}
+      {/* MOT DE LA FONDATRICE */}
       <section className="bg-white">
         <div className="grid items-stretch md:grid-cols-[2fr_3fr]">
           {/* Photo collée au bord gauche, pleine hauteur */}
           <div className="relative min-h-[320px] md:min-h-[480px]">
             <Image
-              src={equipe.image}
-              alt="L'équipe ARTI"
+              src={fondatrice.image}
+              alt="Chloé, fondatrice d'ARTI"
               fill
               sizes="(max-width: 768px) 100vw, 40vw"
               loading="lazy"
@@ -108,13 +71,16 @@ export default async function HomePage() {
           <div className="flex items-center px-6 py-16 sm:px-12 md:py-20 lg:pl-20 lg:pr-28">
             <div className="max-w-xl">
               <h2 className="font-display text-5xl font-medium leading-[1.05] text-foreground sm:text-6xl">
-                {equipe.title}
+                {fondatrice.title}
               </h2>
               <div className="mt-8 space-y-4 text-justify text-sm leading-relaxed text-foreground/85">
-                <p>{equipe.paragraph1}</p>
-                <p>{equipe.paragraph2}</p>
-                <p>{equipe.paragraph3}</p>
+                <p>{fondatrice.paragraph1}</p>
+                <p>{fondatrice.paragraph2}</p>
+                <p>{fondatrice.paragraph3}</p>
               </div>
+              {fondatrice.signature && (
+                <p className="mt-6 font-display text-3xl text-sauge-deep">{fondatrice.signature}</p>
+              )}
             </div>
           </div>
         </div>

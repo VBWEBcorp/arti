@@ -151,9 +151,9 @@ export function CeramicsCatalogue({ items }: { items: Ceramic[] }) {
           Notre catalogue de pièces
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-foreground/70">
-          Une sélection de céramistes français, à retrouver à la boutique.
-          Modèles intemporels disponibles toute l&apos;année, complétés de pièces
-          de saison, de 15&nbsp;€ à 50&nbsp;€ selon la taille.
+          Retrouvez ci-dessous notre sélection de céramiques. De jolis objets
+          intemporels, utilitaires et disponibles toute l&apos;année. Nos pièces
+          vont de 15&nbsp;à&nbsp;50&nbsp;€ selon la taille.
         </p>
       </div>
 
