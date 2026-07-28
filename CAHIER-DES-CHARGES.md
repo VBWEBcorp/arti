@@ -40,6 +40,12 @@
 
 ## 2. Spécification détaillée du site (textes fournis par la cliente)
 
+> ✅ **INTÉGRÉ & DÉPLOYÉ** sur arti-vbweb2 : Accueil (Mot de présentation + Mot de la
+> Fondatrice + Concept 4 étapes), Le Concept (présentation, 4 étapes, « Des ateliers pour
+> tous » + Pinterest, partie Café), Les céramiques (nouveaux textes), FAQ (2h00). Vérifié en prod.
+> Restent optionnels : lien du PDF de la carte (bouton Café pointe sur /carte), confirmation du
+> tableau Pinterest.
+
 ### Page 1 — Accueil
 
 Blocs attendus : Mot de présentation · Concept (4 étapes) · Photo de vos créations · Mot de la Fondatrice · Avis · Envie d'organiser un évènement ?
