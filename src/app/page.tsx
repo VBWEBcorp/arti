@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 
 import { ConceptSteps } from '@/components/arti/concept-steps'
-import { CreationsCarousel } from '@/components/arti/creations-carousel'
+import { CreationsCarousel, type Creation } from '@/components/arti/creations-carousel'
 import { EventsCta } from '@/components/arti/events-cta'
 import { InfoCards } from '@/components/arti/info-cards'
 import { PresentationHero } from '@/components/arti/presentation-hero'
@@ -13,9 +13,26 @@ import {
   webPageJsonLd,
   webSiteJsonLd,
 } from '@/components/seo/json-ld'
+import { connectDB } from '@/lib/db'
 import { homeDefaults } from '@/lib/content-defaults'
 import { getPageContent } from '@/lib/page-content'
 import { siteConfig } from '@/lib/seo'
+import { GalleryImage } from '@/models/Gallery'
+
+// « Vos créations » = photos de la Galerie admin (repli sur défauts si vide).
+async function getCreations(): Promise<Creation[]> {
+  try {
+    await connectDB()
+    const imgs = await GalleryImage.find({ active: true })
+      .sort({ order: 1, createdAt: -1 })
+      .lean()
+    return imgs
+      .map((i) => ({ src: String(i.imageUrl || ''), alt: String(i.title || 'Création ARTI') }))
+      .filter((c) => c.src)
+  } catch {
+    return []
+  }
+}
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
@@ -35,6 +52,7 @@ const jsonLd = {
 
 export default async function HomePage() {
   const { hero, fondatrice } = await getPageContent('home', homeDefaults)
+  const creations = await getCreations()
 
   return (
     <>
@@ -49,8 +67,8 @@ export default async function HomePage() {
       {/* LE CONCEPT (4 étapes) */}
       <ConceptSteps />
 
-      {/* VOS CRÉATIONS */}
-      <CreationsCarousel />
+      {/* VOS CRÉATIONS (photos de la Galerie admin) */}
+      <CreationsCarousel items={creations} />
 
       {/* MOT DE LA FONDATRICE */}
       <section className="bg-white">

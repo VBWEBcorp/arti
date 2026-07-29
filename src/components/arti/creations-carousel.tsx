@@ -4,9 +4,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef } from 'react'
 
-type Creation = { src: string; alt: string }
+export type Creation = { src: string; alt: string }
 
-const creations: Creation[] = [
+// Photos par défaut si la Galerie admin est vide (la section n'est jamais vide).
+const defaultCreations: Creation[] = [
   { src: '/brand/creation-1.png', alt: 'Atelier de peinture sur céramique en groupe chez ARTI' },
   { src: '/brand/creation-2.png', alt: 'Cliente peignant un bol en céramique' },
   { src: '/brand/creation-3.png', alt: 'Peinture délicate d’une tasse au pinceau' },
@@ -15,10 +16,12 @@ const creations: Creation[] = [
   { src: '/brand/creation-6.png', alt: 'Pichet en céramique réalisé chez ARTI' },
 ]
 
-// Liste dupliquée pour une boucle infinie sans coupure visible.
-const loop = [...creations, ...creations]
+export function CreationsCarousel({ items }: { items?: Creation[] }) {
+  // Alimenté par la Galerie admin ; repli sur les photos par défaut si vide.
+  const creations = items && items.length ? items : defaultCreations
+  // Liste dupliquée pour une boucle infinie sans coupure visible.
+  const loop = [...creations, ...creations]
 
-export function CreationsCarousel() {
   const trackRef = useRef<HTMLDivElement>(null)
   const pausedRef = useRef(false)
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
