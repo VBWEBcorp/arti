@@ -12,6 +12,9 @@ const r2Client = r2Enabled
   ? new S3Client({
       region: 'auto',
       endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      // R2 : style « path » (endpoint/bucket/key) pour éviter le hostname à deux
+      // niveaux (bucket.account.r2…) non couvert par le certificat TLS.
+      forcePathStyle: true,
       credentials: {
         accessKeyId: ACCESS_KEY_ID,
         secretAccessKey: SECRET_ACCESS_KEY,
