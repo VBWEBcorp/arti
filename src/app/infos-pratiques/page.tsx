@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { ContactForm } from '@/components/arti/contact-form'
 import { FaqAccordion } from '@/components/arti/faq-accordion'
 import { InfoCards } from '@/components/arti/info-cards'
+import { ReservationWidget } from '@/components/arti/reservation-widget'
 import { faqDefaults, infosDefaults } from '@/lib/content-defaults'
 import { getPageContent } from '@/lib/page-content'
 
@@ -47,6 +48,11 @@ export default async function InfosPratiquesPage() {
         </div>
       </section>
 
+      {/* RÉSERVATION EN LIGNE (module Zenchef) */}
+      <section id="reserver" className="scroll-mt-24 bg-white py-16 sm:py-20">
+        <ReservationWidget content={infos.reservation} />
+      </section>
+
       {/* 3 cards Adresse / Contact / Horaires */}
       <InfoCards />
 
@@ -71,8 +77,8 @@ export default async function InfosPratiquesPage() {
         </div>
       </section>
 
-      {/* CONTACT */}
-      <section id="reserver" className="scroll-mt-24 bg-white pb-20 sm:pb-24">
+      {/* CONTACT (questions / événements) */}
+      <section id="contact" className="scroll-mt-24 bg-white pb-20 sm:pb-24">
         <div className="mx-auto max-w-xl px-6 sm:px-10">
           <ContactForm />
         </div>

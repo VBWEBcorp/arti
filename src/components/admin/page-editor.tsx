@@ -24,6 +24,7 @@ const previewPaths: Record<string, string> = {
   carte: '/carte',
   'arti-cadeaux': '/arti-cadeaux',
   'kit-a-emporter': '/kit-a-emporter',
+  'groupe-evenement': '/peinture-sur-ceramique-a-rennes',
   'infos-pratiques': '/infos-pratiques',
   faq: '/faq',
 }

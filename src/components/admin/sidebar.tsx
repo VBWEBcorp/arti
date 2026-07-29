@@ -24,6 +24,7 @@ import {
   Palette,
   Package,
   Coffee,
+  Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSidebar } from '@/components/admin/sidebar-context'
@@ -39,6 +40,7 @@ const pageEditItems = [
   { href: '/admin/pages/carte', label: 'La carte', icon: Coffee },
   { href: '/admin/pages/arti-cadeaux', label: 'Cartes cadeaux', icon: Gift },
   { href: '/admin/pages/kit-a-emporter', label: 'Kit à emporter', icon: Package },
+  { href: '/admin/pages/groupe-evenement', label: 'Groupe & Évènement', icon: Users },
   { href: '/admin/pages/infos-pratiques', label: 'Infos pratiques', icon: Phone },
   { href: '/admin/pages/faq', label: 'FAQ', icon: MessageSquare },
 ]

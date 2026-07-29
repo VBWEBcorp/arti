@@ -41,6 +41,14 @@ export const infosDefaults = {
       'Nous sommes situés dans le centre-ville de Rennes, 10 rue Poullain Duparc à côté de République. Cliquez sur la carte ci-dessous pour venir nous rencontrer.',
     mapQuery: '10 rue Poullain Duparc Rennes',
   },
+  reservation: {
+    title: 'Réservations',
+    intro1:
+      "Nous serions ravis de vous accueillir prochainement chez Arti pour un atelier de peinture sur céramique de 2h30 ! Vous trouverez ci-dessous les différents créneaux de réservations. Le paiement de l'atelier se fait sur place, en fonction de la pièce que vous choisirez.",
+    intro2: 'À très bientôt !',
+    // Module de réservation en ligne Zenchef (modifiable si l'identifiant change).
+    zenchefUrl: 'https://bookings.zenchef.com/results?rid=366284&fullscreen=1',
+  },
 }
 
 export type FaqItem = { q: string; a: string }
@@ -96,7 +104,7 @@ export const faqDefaults = {
     title: 'Vous ne trouvez pas votre réponse ?',
     text: 'Écrivez-nous, nous vous répondrons avec plaisir.',
     buttonLabel: 'Nous contacter',
-    buttonHref: '/infos-pratiques#reserver',
+    buttonHref: '/infos-pratiques#contact',
   },
 }
 
@@ -346,4 +354,25 @@ export const carteDefaults = {
   ] as MenuCategory[],
   footnote:
     "Carte non contractuelle, susceptible d'évoluer selon les saisons et les arrivages.",
+}
+
+export const groupeDefaults = {
+  hero: {
+    title: 'Envie de partager un moment créatif et convivial ?',
+    paragraphs: [
+      'Chez ARTI, nous serions ravies de vous accueillir pour organiser un événement unique, à votre image.',
+      "Que ce soit pour un anniversaire, un EVJF, un EVG ou toute autre occasion spéciale, nous vous accompagnons pour faire de ce moment une expérience agréable, entre rires, gourmandises et créativité.",
+      "Pour les entreprises, ARTI est aussi un lieu idéal pour renforcer les liens d'équipe autrement : team-building, afterwork, atelier collaboratif ou même conférence créative !",
+      'Nous adaptons chaque événement à vos envies : choix des pièces à peindre, formules gourmandes, privatisation partielle ou totale du café…',
+      "N'hésitez pas à nous partager vos attentes : nous créerons ensemble un devis sur-mesure pour un moment à la fois inspirant et authentique.",
+    ] as string[],
+    buttonLabel: 'Faire une demande',
+    buttonHref: 'mailto:hello@articafeceramique.fr?subject=Demande%20événement',
+    image: '/brand/atelier-1.png',
+  },
+  photos: [
+    '/brand/creation-1.png',
+    '/brand/creation-2.png',
+    '/brand/creation-4.png',
+  ] as string[],
 }
