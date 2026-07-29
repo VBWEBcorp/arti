@@ -97,7 +97,7 @@ export default function AdminGalleryPage() {
 
   const handleAddImage = async () => {
     if (!newImage.title || !newImage.imageUrl) {
-      alert('Remplissez au moins le titre et l\'URL')
+      alert('Remplissez au moins le titre et la photo')
       return
     }
 
@@ -296,15 +296,11 @@ export default function AdminGalleryPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl">URL de l'image</Label>
-            <Input
-              id="imageUrl"
-              value={newImage.imageUrl}
-              onChange={(e) => setNewImage({ ...newImage, imageUrl: e.target.value })}
-              placeholder="https://..."
-            />
-          </div>
+          <ImageField
+            label="Photo"
+            value={newImage.imageUrl}
+            onChange={(v) => setNewImage({ ...newImage, imageUrl: v })}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="category">Catégorie</Label>
