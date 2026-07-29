@@ -18,7 +18,8 @@ interface NavLink {
 // Ordre du burger menu ARTI : parcours visiteur (concept → carte → céramiques → kit → reste)
 const links: NavLink[] = [
   { to: '/le-concept', label: 'Le concept' },
-  { to: '/carte', label: 'La carte' },
+  // « La carte » masquée du menu (front) — page conservée, accessible par URL.
+  // { to: '/carte', label: 'La carte' },
   { to: '/arti-ceramiques', label: 'Les céramiques' },
   // Kit à emporter masqué du menu (front) pour le moment — la page reste accessible par URL.
   // { to: '/kit-a-emporter', label: 'Kit à emporter' },
@@ -30,25 +31,10 @@ const links: NavLink[] = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false)
-  const [blogEnabled, setBlogEnabled] = useState(false)
   const pathname = usePathname()
 
-  // Le lien « Blog » n'apparaît que si le blog est activé côté admin
-  // (« Visible sur le site »). Réponse mise en cache, donc peu coûteuse.
-  useEffect(() => {
-    let alive = true
-    fetch('/api/blog/settings')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((s) => {
-        if (alive && s && s.enabled !== false) setBlogEnabled(true)
-      })
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  const navLinks = blogEnabled ? [...links, { to: '/blog', label: 'Blog' }] : links
+  // « Blog » masqué du menu (front) pour le moment.
+  const navLinks = links
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''

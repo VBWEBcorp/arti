@@ -7,7 +7,8 @@ import { siteConfig } from '@/lib/seo'
 const navLinks = [
   { label: 'Accueil', to: '/' },
   { label: 'Le concept', to: '/le-concept' },
-  { label: 'La carte', to: '/carte' },
+  // « La carte » masquée du footer (front) — page conservée, accessible par URL.
+  // { label: 'La carte', to: '/carte' },
   { label: 'Les céramiques', to: '/arti-ceramiques' },
   // Kit à emporter masqué du footer (front) pour le moment — page conservée, accessible par URL.
   // { label: 'Kit à emporter', to: '/kit-a-emporter' },
