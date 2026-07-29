@@ -440,6 +440,9 @@ function giftCardEmailHtml(opts: {
   // image externe (fragile en mail). La carte illustrée reste en pièce jointe PDF.
   const validity = giftCard.expiresAt ? ` &middot; valable jusqu'au ${frDate(giftCard.expiresAt)}` : ''
   const year = new Date().getFullYear()
+  // Logo ARTI (version blanche) hébergé sur Cloudflare R2 : URL HTTPS publique,
+  // fiable dans tous les clients mail (contrairement à l'image inline CID).
+  const logoWhite = `${(process.env.R2_PUBLIC_URL || 'https://pub-b580b12891804986ab6624da7bf94078.r2.dev').replace(/\/+$/, '')}/brand/logo-arti-white.png`
   const messageBlock = giftCard.recipient?.message
     ? `<tr><td style="padding:22px 32px 0;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -462,10 +465,9 @@ function giftCardEmailHtml(opts: {
     <tr><td align="center" style="padding:28px 14px;">
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;">
 
-        <!-- En-tête -->
-        <tr><td style="background:#7d8a6f;padding:34px 28px;text-align:center;">
-          <div style="font-family:Georgia,'Times New Roman',serif;font-size:36px;line-height:1;letter-spacing:9px;color:#ffffff;">ARTI</div>
-          <div style="margin-top:10px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e7ece1;">Carte cadeau &middot; Café céramique</div>
+        <!-- En-tête : vrai logo ARTI (blanc) seul, hébergé sur R2 -->
+        <tr><td style="background:#7d8a6f;padding:36px 28px;text-align:center;">
+          <img src="${logoWhite}" alt="ARTI" width="170" style="display:block;margin:0 auto;width:170px;max-width:62%;height:auto;">
         </td></tr>
 
         <!-- Intro -->
