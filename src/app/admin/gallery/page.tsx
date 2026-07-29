@@ -49,9 +49,12 @@ export default function AdminGalleryPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Cache-buster : l'admin doit toujours voir la liste à jour
+        // (ajout/suppression immédiats, l'endpoint public est mis en cache CDN).
+        const bust = `?t=${Date.now()}`
         const [settingsRes, imagesRes] = await Promise.all([
-          fetch('/api/gallery/settings'),
-          fetch('/api/gallery/images'),
+          fetch(`/api/gallery/settings${bust}`, { cache: 'no-store' }),
+          fetch(`/api/gallery/images${bust}`, { cache: 'no-store' }),
         ])
 
         const settingsData = await settingsRes.json()

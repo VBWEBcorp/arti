@@ -78,7 +78,9 @@ export function PageEditor({ pageId, title, defaultContent, children }: PageEdit
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch(`/api/content/${pageId}`)
+        // Cache-buster : l'admin doit toujours charger le contenu à jour
+        // (l'endpoint est mis en cache CDN pour les lectures publiques).
+        const response = await fetch(`/api/content/${pageId}?t=${Date.now()}`, { cache: 'no-store' })
         const result = await response.json()
 
         if (result.content && Object.keys(result.content).length > 0) {

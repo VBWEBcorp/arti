@@ -11,9 +11,9 @@ export async function GET() {
       .sort({ order: 1 })
       .lean()
     return NextResponse.json(images, {
-      headers: {
-        'Cache-Control': 'public, max-age=60, s-maxage=120, stale-while-revalidate=600',
-      },
+      // Lu par l'admin galerie — pas de cache, pour voir ajouts/suppressions
+      // immédiatement après un rechargement.
+      headers: { 'Cache-Control': 'no-store' },
     })
   } catch (error) {
     console.error('Gallery images error:', error)

@@ -5,8 +5,11 @@ import { verifyAuth } from '@/lib/auth'
 
 type Params = Promise<{ pageId: string }>
 
+// Endpoint lu par l'admin (éditeur de pages) — pas par les pages publiques
+// (elles lisent la base en direct via getPageContent). On ne cache donc pas,
+// pour que l'admin voie toujours l'état à jour après une sauvegarde.
 const CACHE_HEADERS = {
-  'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
+  'Cache-Control': 'no-store',
 }
 
 // GET page content (public)
