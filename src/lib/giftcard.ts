@@ -21,7 +21,7 @@ export class GiftCardError extends Error {
 export const GIFT_CARD_PRESETS = [15, 20, 25, 30, 40, 50] as const
 export const MIN_AMOUNT = 5
 // Plafond haut pour autoriser des montants élevés (montant libre par pas de 10 € au-delà de 50 €).
-export const MAX_AMOUNT = 2000
+export const MAX_AMOUNT = 5000
 
 /** Validité par défaut des cartes cadeaux : 1 an à compter de maintenant. */
 function oneYearFromNow(): Date {

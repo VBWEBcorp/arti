@@ -39,12 +39,12 @@ type PurchaseResult = {
 const FALLBACK: Config = {
   presets: [15, 20, 25, 30, 40, 50],
   min: 5,
-  max: 2000,
+  max: 5000,
   stripeConfigured: false,
   stripePublishableKey: '',
 }
 
-// Montant libre : tranches de 10 €, à partir de 50 € et jusqu'au plafond.
+// Montant plus élevé : au-delà des paliers, on monte de 10 € en 10 € (bouton +/-).
 const CUSTOM_MIN = 50
 const CUSTOM_STEP = 10
 
@@ -76,10 +76,10 @@ export function GiftCardPurchase() {
     setAmount(preset)
     setCustomText('')
   }
-  // « Preset actif » = un raccourci choisi (et pas une valeur posée au curseur).
+  // « Preset actif » = un raccourci choisi (et pas une valeur saisie).
   const isPreset = config.presets.includes(amount) && !customText
-  // Position du curseur : le montant courant s'il est libre, sinon le plancher.
-  const sliderValue = isPreset ? CUSTOM_MIN : Math.max(CUSTOM_MIN, amount)
+  // Valeur courante du champ « montant plus élevé » (≥ 50 €).
+  const currentCustom = Number(customText) || (isPreset ? CUSTOM_MIN : amount)
 
   useEffect(() => {
     // Montant pré-sélectionné via l'URL (ex. /produit/carte-cadeau?montant=50)
@@ -286,52 +286,50 @@ export function GiftCardPurchase() {
               })}
             </div>
 
-            {/* Montant libre : curseur par tranches de 10 €, à partir de 50 € */}
+            {/* Montant plus élevé : on monte de 10 € en 10 € avec + / − */}
             <div
               className={cn(
                 'mt-3 rounded-sm border p-4 transition-colors',
                 !isPreset ? 'border-sauge bg-sauge/5' : 'border-foreground/15 bg-beige-light'
               )}
             >
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-foreground/60">
-                  Ou un montant plus élevé, par tranches de 10&nbsp;€
-                </p>
-                <span className="font-display text-2xl font-medium text-foreground">
-                  {eur(sliderValue)}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center gap-3">
+              <p className="mb-2 text-center text-xs text-foreground/60">Pour un montant plus élevé</p>
+              <div className="flex items-center justify-center gap-4">
                 <button
                   type="button"
-                  aria-label="Retirer 10 €"
-                  onClick={() => commitCustom(sliderValue - CUSTOM_STEP)}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-white text-xl text-foreground transition-colors hover:border-sauge hover:text-sauge-deep"
+                  aria-label="Diminuer de 10 €"
+                  onClick={() => commitCustom(currentCustom - CUSTOM_STEP)}
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full border border-foreground/25 bg-white text-2xl leading-none text-foreground transition-colors hover:border-sauge hover:text-sauge-deep"
                 >
                   −
                 </button>
-                <input
-                  type="range"
-                  min={CUSTOM_MIN}
-                  max={config.max}
-                  step={CUSTOM_STEP}
-                  value={sliderValue}
-                  onChange={(e) => commitCustom(Number(e.target.value))}
-                  aria-label="Montant de la carte cadeau"
-                  className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-foreground/15 accent-sauge"
-                />
+                <div className="flex items-baseline gap-1">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={customText}
+                    placeholder={String(CUSTOM_MIN)}
+                    onChange={(e) => setCustomText(e.target.value.replace(/[^\d]/g, ''))}
+                    onBlur={() => customText && commitCustom(Number(customText))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (customText) commitCustom(Number(customText))
+                      }
+                    }}
+                    aria-label="Montant personnalisé en euros"
+                    className="w-24 border-0 bg-transparent text-center font-display text-4xl font-medium text-foreground placeholder:text-foreground/30 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="font-display text-2xl font-medium text-foreground/60">€</span>
+                </div>
                 <button
                   type="button"
                   aria-label="Ajouter 10 €"
-                  onClick={() => commitCustom(sliderValue + CUSTOM_STEP)}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-white text-xl text-foreground transition-colors hover:border-sauge hover:text-sauge-deep"
+                  onClick={() => commitCustom(currentCustom + CUSTOM_STEP)}
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full border border-foreground/25 bg-white text-2xl leading-none text-foreground transition-colors hover:border-sauge hover:text-sauge-deep"
                 >
                   +
                 </button>
-              </div>
-              <div className="mt-1.5 flex justify-between text-[10px] text-foreground/40">
-                <span>{eur(CUSTOM_MIN)}</span>
-                <span>{eur(config.max)}</span>
               </div>
             </div>
           </div>
