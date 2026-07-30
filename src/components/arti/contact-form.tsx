@@ -6,12 +6,13 @@ import { cn } from '@/lib/utils'
 
 /**
  * Formulaire de contact / réservation avec captcha mathématique simple.
- * Démo locale — l'envoi est simulé. À brancher sur un endpoint email côté admin.
+ * Envoie le message vers la boutique (hello@articafeceramique.fr) via /api/contact.
  */
 export function ContactForm() {
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>(
     'idle'
   )
+  const [errMsg, setErrMsg] = useState('Réponse anti-spam incorrecte. Réessayez.')
   const captcha = useMemo(() => {
     const a = 5
     const b = 14
@@ -20,15 +21,39 @@ export function ContactForm() {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const data = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const data = new FormData(form)
     if (Number(data.get('captcha')) !== captcha.expected) {
+      setErrMsg('Réponse anti-spam incorrecte. Réessayez.')
       setStatus('error')
       return
     }
     setStatus('sending')
-    await new Promise((r) => setTimeout(r, 700))
-    setStatus('sent')
-    e.currentTarget.reset()
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nom: data.get('nom'),
+          prenom: data.get('prenom'),
+          telephone: data.get('telephone'),
+          email: data.get('email'),
+          message: data.get('message'),
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || "L'envoi a échoué.")
+      }
+      setStatus('sent')
+      form.reset()
+    } catch (err) {
+      setErrMsg(
+        (err as Error).message ||
+          "L'envoi a échoué. Réessayez ou écrivez-nous à hello@articafeceramique.fr."
+      )
+      setStatus('error')
+    }
   }
 
   return (
@@ -81,9 +106,7 @@ export function ContactForm() {
         </button>
 
         {status === 'error' && (
-          <p className="text-sm text-red-700">
-            Réponse anti-spam incorrecte. Réessayez.
-          </p>
+          <p className="text-sm text-red-700">{errMsg}</p>
         )}
         {status === 'sent' && (
           <p className="text-sm font-medium text-sauge-deep">
