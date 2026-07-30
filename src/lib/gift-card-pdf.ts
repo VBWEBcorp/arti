@@ -100,11 +100,11 @@ export async function renderGiftCardPdf(card: {
     verso.drawText(t, { x: center - w / 2, y, size, font: f, color: ink })
   }
 
-  // Numero : sous le libelle « N » (cale a gauche du N, pas de chevauchement).
-  verso.drawText(pdfSafe(card.code), { x: 210, y: 337, size: 11, font: bold, color: ink })
+  // Numero : a la suite du libelle « N » (meme ligne, baseline alignee).
+  verso.drawText(pdfSafe(card.code), { x: 241, y: 357, size: 10.5, font: bold, color: ink })
 
-  // Valeur (montant)
-  drawCentered(eur(card.amount), RULE_VALEUR + 10.5, 13, bold)
+  // Valeur (montant) — typo normale (pas en gras).
+  drawCentered(eur(card.amount), RULE_VALEUR + 10.5, 13, font)
 
   // A l'attention de (si destinataire nomme)
   if (card.recipientName) drawCentered(truncate(card.recipientName, 28), RULE_ATTENTION + 10, 12)

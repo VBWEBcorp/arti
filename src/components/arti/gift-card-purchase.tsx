@@ -38,11 +38,15 @@ type PurchaseResult = {
 
 const FALLBACK: Config = {
   presets: [15, 20, 25, 30, 40, 50],
-  min: 15,
-  max: 50,
+  min: 5,
+  max: 2000,
   stripeConfigured: false,
   stripePublishableKey: '',
 }
+
+// Montant libre : tranches de 10 €, à partir de 50 € et jusqu'au plafond.
+const CUSTOM_MIN = 50
+const CUSTOM_STEP = 10
 
 export function GiftCardPurchase() {
   const [config, setConfig] = useState<Config>(FALLBACK)
@@ -54,8 +58,25 @@ export function GiftCardPurchase() {
 
   // Formulaire
   const [amount, setAmount] = useState<number>(30)
+  // Texte du champ « montant libre » (vide tant qu'un preset est choisi).
+  const [customText, setCustomText] = useState('')
   const [purchaser, setPurchaser] = useState({ name: '', email: '' })
   const [recipient, setRecipient] = useState({ name: '', email: '', message: '' })
+
+  // Arrondit à la tranche de 10 € et borne entre 50 € et le plafond.
+  const clampCustom = (n: number) =>
+    Math.min(config.max, Math.max(CUSTOM_MIN, Math.round(n / CUSTOM_STEP) * CUSTOM_STEP))
+  const commitCustom = (n: number) => {
+    if (!Number.isFinite(n) || n <= 0) return
+    const v = clampCustom(n)
+    setAmount(v)
+    setCustomText(String(v))
+  }
+  const pickPreset = (preset: number) => {
+    setAmount(preset)
+    setCustomText('')
+  }
+  const isPreset = config.presets.includes(amount)
 
   useEffect(() => {
     // Montant pré-sélectionné via l'URL (ex. /produit/carte-cadeau?montant=50)
@@ -243,12 +264,12 @@ export function GiftCardPurchase() {
             </h3>
             <div className="mt-4 grid grid-cols-3 gap-2">
               {config.presets.map((preset) => {
-                const selected = amount === preset
+                const selected = amount === preset && !customText
                 return (
                   <button
                     key={preset}
                     type="button"
-                    onClick={() => setAmount(preset)}
+                    onClick={() => pickPreset(preset)}
                     className={cn(
                       'flex items-center justify-center py-3 font-display text-2xl font-medium transition-all',
                       selected
@@ -260,6 +281,57 @@ export function GiftCardPurchase() {
                   </button>
                 )
               })}
+            </div>
+
+            {/* Montant libre : par tranches de 10 €, à partir de 50 € */}
+            <div className="mt-3">
+              <p className="mb-1.5 text-xs text-foreground/60">
+                Ou un montant plus élevé, par tranches de 10&nbsp;€
+              </p>
+              <div
+                className={cn(
+                  'flex items-stretch gap-2 rounded-sm border p-1 transition-colors',
+                  !isPreset ? 'border-sauge bg-sauge/5' : 'border-foreground/15 bg-beige-light'
+                )}
+              >
+                <button
+                  type="button"
+                  aria-label="Retirer 10 €"
+                  onClick={() => commitCustom((amount < CUSTOM_MIN + CUSTOM_STEP ? CUSTOM_MIN + CUSTOM_STEP : amount) - CUSTOM_STEP)}
+                  className="flex size-11 items-center justify-center rounded-sm border border-foreground/15 bg-white text-xl text-foreground transition-colors hover:border-sauge hover:text-sauge-deep"
+                >
+                  −
+                </button>
+                <div className="flex flex-1 items-center justify-center gap-1">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    step={CUSTOM_STEP}
+                    min={CUSTOM_MIN}
+                    max={config.max}
+                    value={customText}
+                    placeholder={`${CUSTOM_MIN} +`}
+                    onChange={(e) => setCustomText(e.target.value.replace(/[^\d]/g, ''))}
+                    onBlur={() => customText && commitCustom(Number(customText))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (customText) commitCustom(Number(customText))
+                      }
+                    }}
+                    className="w-24 border-0 bg-transparent text-center font-display text-2xl font-medium text-foreground focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="font-display text-2xl font-medium text-foreground/70">€</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Ajouter 10 €"
+                  onClick={() => commitCustom((amount < CUSTOM_MIN ? CUSTOM_MIN : amount) + CUSTOM_STEP)}
+                  className="flex size-11 items-center justify-center rounded-sm border border-foreground/15 bg-white text-xl text-foreground transition-colors hover:border-sauge hover:text-sauge-deep"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
 
