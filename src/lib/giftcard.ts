@@ -557,12 +557,20 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
   }
 
   if (giftCard.purchasedBy?.email) {
+    // Cadeau pour quelqu'un d'autre : l'acheteur reçoit une COPIE (le destinataire
+    // reçoit aussi la sienne plus bas). Sinon, c'est simplement sa carte.
+    const forOther = !!(giftCard.recipient?.name || giftCard.recipient?.email)
+    const forWhom = giftCard.recipient?.name ? ` offerte à ${escapeHtml(giftCard.recipient.name)}` : ''
     await sendEmail({
       to: giftCard.purchasedBy.email,
-      subject: `Votre carte cadeau ARTI — ${eur(giftCard.initialAmount)}`,
+      subject: forOther
+        ? `Votre copie — carte cadeau ARTI ${eur(giftCard.initialAmount)}`
+        : `Votre carte cadeau ARTI — ${eur(giftCard.initialAmount)}`,
       html: giftCardEmailHtml({
-        title: 'Merci pour votre achat',
-        intro: `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous. La carte complète (avec le numéro et la date de validité) est en pièce jointe au format PDF.`,
+        title: forOther ? 'Votre copie de la carte cadeau' : 'Merci pour votre achat',
+        intro: forOther
+          ? `Merci pour votre achat&nbsp;! Voici votre copie de la carte cadeau${forWhom}, d'un montant de ${eur(giftCard.initialAmount)}. Le code et la carte complète sont ci-dessous&nbsp;; le destinataire a lui aussi reçu la sienne par email s'il a été renseigné.`
+          : `Voici votre carte cadeau d'un montant de ${eur(giftCard.initialAmount)}. Conservez précieusement le code ci-dessous. La carte complète (avec le numéro et la date de validité) est en pièce jointe au format PDF.`,
         giftCard,
       }),
       attachments,

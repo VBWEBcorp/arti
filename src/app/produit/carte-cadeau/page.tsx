@@ -9,7 +9,7 @@ import { InfoCards } from '@/components/arti/info-cards'
 export const metadata: Metadata = {
   title: 'Carte Cadeau',
   description:
-    "Offrez une carte cadeau ARTI de 10 € à 100 € : un atelier de peinture sur céramique au cœur de Rennes. Achat en ligne, code envoyé par email.",
+    "Offrez une carte cadeau ARTI (montant libre) : un atelier de peinture sur céramique au cœur de Rennes. Achat en ligne, code envoyé par email.",
   alternates: { canonical: '/produit/carte-cadeau' },
 }
 
@@ -43,9 +43,6 @@ export default function CarteCadeauPage() {
             <h1 className="mt-2 font-display text-5xl font-medium leading-[1.02] text-foreground sm:text-6xl">
               Carte Cadeau
             </h1>
-            <p className="mt-3 font-display text-3xl font-medium text-sauge-deep">
-              10,00 € – 100,00 €
-            </p>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-foreground/80">
               Un atelier de peinture sur céramique est une idée géniale. La personne qui recevra
               cette attention pourra venir vivre un moment créatif hors du temps et garder un
