@@ -51,7 +51,7 @@ const jsonLd = {
 }
 
 export default async function HomePage() {
-  const { hero, fondatrice } = await getPageContent('home', homeDefaults)
+  const { hero, fondatrice, evenement } = await getPageContent('home', homeDefaults)
   const creations = await getCreations()
 
   return (
@@ -108,7 +108,7 @@ export default async function HomePage() {
       <Reviews />
 
       {/* ÉVÉNEMENTS */}
-      <EventsCta />
+      <EventsCta content={evenement} />
 
       {/* INFOS (3 cartes Adresse / Contact / Horaires) — pt large pour le débordement de la tasse */}
       <InfoCards className="md:pt-40" />

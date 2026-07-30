@@ -31,6 +31,16 @@ export const homeDefaults = {
       "J'espère que l'expérience vous plaira, et que ce moment suspendu, de partage, vous laissera un souvenir mémorable !",
     signature: 'Chloé',
   },
+  // Bloc « Vous souhaitez organiser un événement ? »
+  evenement: {
+    title: 'Vous souhaitez organiser un événement ?',
+    text:
+      "Que ce soit pour un anniversaire, un mariage, un enterrement de vie de jeune fille, ou un événement d'entreprise, Arti est l'endroit idéal pour célébrer. Nous proposons des réservations pour tous types d'événements. Profitez d'un cadre unique où vos invités pourront créer des souvenirs inoubliables en décorant leurs propres pièces de céramique tout en savourant une boisson. Contactez-nous pour organiser votre événement et nous nous occupons de tout pour vous offrir une expérience créative et conviviale.",
+    buttonLabel: 'Nous contacter',
+    buttonHref: '/peinture-sur-ceramique-a-rennes',
+    image1: '/brand/creation-1.png',
+    image2: '/brand/event-cup.png',
+  },
 }
 
 export const infosDefaults = {

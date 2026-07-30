@@ -92,6 +92,42 @@ export default function AdminAccueilPage() {
               onChange={(v) => update('fondatrice.image', v)}
             />
           </SectionEditor>
+
+          <SectionEditor title="Bloc « Organiser un événement »">
+            <FieldEditor
+              label="Titre"
+              value={content.evenement?.title}
+              onChange={(v) => update('evenement.title', v)}
+            />
+            <FieldEditor
+              label="Texte"
+              value={content.evenement?.text}
+              onChange={(v) => update('evenement.text', v)}
+              type="textarea"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FieldEditor
+                label="Libellé du bouton"
+                value={content.evenement?.buttonLabel}
+                onChange={(v) => update('evenement.buttonLabel', v)}
+              />
+              <FieldEditor
+                label="Lien du bouton"
+                value={content.evenement?.buttonHref}
+                onChange={(v) => update('evenement.buttonHref', v)}
+              />
+            </div>
+            <ImageField
+              label="Photo principale (grande)"
+              value={content.evenement?.image1}
+              onChange={(v) => update('evenement.image1', v)}
+            />
+            <ImageField
+              label="Petite photo (tasse en bas)"
+              value={content.evenement?.image2}
+              onChange={(v) => update('evenement.image2', v)}
+            />
+          </SectionEditor>
         </>
       )}
     </PageEditor>

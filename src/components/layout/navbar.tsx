@@ -96,7 +96,7 @@ export function Navbar() {
         <Link
           href="/infos-pratiques#reserver"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 400 }}
-          className="inline-flex h-10 items-center justify-center rounded-sm bg-sauge px-6 text-2xl leading-none text-white transition-colors hover:bg-sauge-deep"
+          className="inline-flex h-10 items-center justify-center rounded-sm bg-sauge px-4 text-xl leading-none text-white transition-colors hover:bg-sauge-deep sm:px-6 sm:text-2xl"
         >
           Réserver
         </Link>

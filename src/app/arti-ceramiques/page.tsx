@@ -50,7 +50,7 @@ export default async function ArtiCeramiquesPage() {
               <h1 className="font-display text-5xl font-medium leading-[1.05] text-neutral-700 sm:text-6xl">
                 {c.hero.title}
               </h1>
-              <div className="mt-6 space-y-4 text-sm leading-relaxed text-foreground/85">
+              <div className="mt-6 space-y-4 text-justify text-sm leading-relaxed text-foreground/85">
                 <p>{c.hero.paragraph1}</p>
                 <p>{c.hero.paragraph2}</p>
                 <p>{c.hero.paragraph3}</p>

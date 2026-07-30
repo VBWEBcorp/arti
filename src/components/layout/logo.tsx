@@ -12,7 +12,8 @@ type LogoProps = {
 const sizes = {
   sm: 'h-8',
   md: 'h-11',
-  lg: 'h-16',
+  // Plus petit sur mobile pour dégager le bouton « Réserver », taille pleine dès sm.
+  lg: 'h-12 sm:h-16',
 } as const
 
 /**
