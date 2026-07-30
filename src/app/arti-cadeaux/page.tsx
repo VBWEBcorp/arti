@@ -8,7 +8,7 @@ import { getPageContent } from '@/lib/page-content'
 export const metadata: Metadata = {
   title: 'Cartes cadeaux',
   description:
-    "Offrez un bon cadeau ARTI : un atelier de peinture sur céramique unique au cœur de Rennes, entre 15€ et 50€.",
+    "Offrez une carte cadeau ARTI : un moment de peinture sur céramique unique au cœur de Rennes, pour le montant de votre choix. Valable en atelier comme à la boutique.",
   alternates: { canonical: '/arti-cadeaux' },
 }
 

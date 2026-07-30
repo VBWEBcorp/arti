@@ -6,7 +6,7 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     name: siteConfig.name,
     url: siteConfig.url,
-    logo: `${siteConfig.url}/favicon.svg`,
+    logo: `${siteConfig.url}/brand/logo-arti.png`,
     contactPoint: {
       '@type': 'ContactPoint',
       telephone: siteConfig.phone,

@@ -52,7 +52,9 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     title: siteConfig.name,
     description: siteConfig.description,
-    images: [{ url: siteConfig.ogImage }],
+    images: [
+      { url: siteConfig.ogImage, width: 1200, height: 630, alt: siteConfig.name },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -68,10 +70,8 @@ export const metadata: Metadata = {
     'max-snippet': -1,
     'max-video-preview': -1,
   },
-  icons: {
-    icon: '/favicon.svg',
-    apple: '/apple-touch-icon.png',
-  },
+  // Les icônes (favicon, apple-touch-icon) sont générées automatiquement par
+  // Next.js à partir de src/app/icon.png, apple-icon.png et favicon.ico (logo ARTI).
   alternates: {
     canonical: '/',
   },
