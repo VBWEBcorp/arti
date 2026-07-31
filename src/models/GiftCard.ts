@@ -36,6 +36,8 @@ export interface IGiftCard extends Document {
   transactions: IGiftCardTransaction[]
   source: GiftCardSource
   createdByAdmin?: mongoose.Types.ObjectId | string | null
+  /** Corbeille : date de mise à la corbeille (soft delete). Non nul = supprimée mais récupérable. */
+  deletedAt?: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -107,12 +109,16 @@ const GiftCardSchema = new Schema<IGiftCard>(
     },
 
     createdByAdmin: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+
+    // Corbeille : suppression réversible (soft delete). Non nul = dans la corbeille.
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 )
 
 // Index
 GiftCardSchema.index({ status: 1 })
+GiftCardSchema.index({ deletedAt: 1 })
 GiftCardSchema.index({ 'purchasedBy.email': 1 })
 GiftCardSchema.index({ expiresAt: 1 }, { sparse: true })
 // Anti double-achat : un PaymentIntent ne crée qu'une seule carte cadeau.

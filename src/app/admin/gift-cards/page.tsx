@@ -13,6 +13,7 @@ import {
   Loader2,
   Plus,
   RefreshCw,
+  RotateCcw,
   ScanLine,
   Search,
   Sparkles,
@@ -58,6 +59,7 @@ type GiftCard = {
   expiresAt?: string
   createdAt: string
   transactions?: Tx[]
+  deletedAt?: string | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -79,7 +81,18 @@ const FILTERS = [
   { value: 'used', label: 'Épuisées' },
   { value: 'expired', label: 'Expirées' },
   { value: 'cancelled', label: 'Annulées' },
+  { value: 'deleted', label: 'Supprimées' },
 ]
+
+const CHANNELS = [
+  { value: 'all', label: 'Tous les canaux' },
+  { value: 'online', label: 'En ligne' },
+  { value: 'magasin', label: 'En magasin' },
+] as const
+
+// « En ligne » = achat sur le site (source online) ; tout le reste (comptoir,
+// avoir, avantage, offert) = « En magasin ».
+const isOnline = (c: GiftCard) => c.source === 'online'
 
 function authHeaders(): HeadersInit {
   const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
@@ -92,12 +105,13 @@ export default function AdminGiftCardsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [channel, setChannel] = useState<'all' | 'online' | 'magasin'>('all')
   const [showCreate, setShowCreate] = useState(false)
   const [showRedeem, setShowRedeem] = useState(false)
   const [detail, setDetail] = useState<GiftCard | null>(null)
   const [confirmState, setConfirmState] = useState<{
     id: string
-    action: 'cancel' | 'reactivate' | 'delete'
+    action: 'cancel' | 'reactivate' | 'delete' | 'restore'
     tone: 'danger' | 'primary'
     title: string
     message: string
@@ -144,6 +158,25 @@ export default function AdminGiftCardsPage() {
     }
   }, [cards])
 
+  // Répartition par canal (exclut la corbeille : elle n'est jamais chargée dans
+  // les vues normales). Montant = total émis (montant initial).
+  const channelStats = useMemo(() => {
+    const on = cards.filter(isOnline)
+    const mag = cards.filter((c) => !isOnline(c))
+    const sum = (a: GiftCard[]) => a.reduce((s, c) => s + c.initialAmount, 0)
+    return { onCount: on.length, onTotal: sum(on), magCount: mag.length, magTotal: sum(mag) }
+  }, [cards])
+
+  // Liste affichée : filtre canal appliqué côté client (les stats, elles,
+  // restent calculées sur l'ensemble chargé).
+  const visibleCards = useMemo(
+    () =>
+      channel === 'all'
+        ? cards
+        : cards.filter((c) => (channel === 'online' ? isOnline(c) : !isOnline(c))),
+    [cards, channel]
+  )
+
   // Confirmation via pop-up stylée (et non le confirm() natif du navigateur).
   const cancelCard = (id: string) =>
     setConfirmState({
@@ -173,8 +206,18 @@ export default function AdminGiftCardsPage() {
       tone: 'danger',
       title: 'Supprimer cette carte ?',
       message:
-        'La carte sera définitivement effacée de la base. Contrairement à l’annulation, cette action est irréversible : elle ne pourra pas être réactivée.',
-      confirmLabel: 'Supprimer définitivement',
+        'La carte est déplacée dans la corbeille : elle disparaît des listes et n’est plus comptée dans les statistiques, mais reste consultable via le filtre « Supprimées » et peut être restaurée à tout moment.',
+      confirmLabel: 'Supprimer',
+    })
+
+  const restoreCard = (id: string) =>
+    setConfirmState({
+      id,
+      action: 'restore',
+      tone: 'primary',
+      title: 'Restaurer cette carte ?',
+      message: 'La carte sortira de la corbeille et réapparaîtra dans les listes et les statistiques.',
+      confirmLabel: 'Restaurer',
     })
 
   // Exécute l'action confirmée. Gère erreurs serveur ET réseau (« Failed to fetch »).
@@ -252,6 +295,24 @@ export default function AdminGiftCardsPage() {
           <StatCard icon={Ban} tone="muted" label="Utilisées" value={String(stats.used)} />
         </div>
 
+        {/* Répartition par canal : en ligne vs en magasin (hors corbeille) */}
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+          <ChannelCard
+            label="En ligne"
+            hint="Achats sur le site"
+            count={channelStats.onCount}
+            total={channelStats.onTotal}
+            tone="sauge"
+          />
+          <ChannelCard
+            label="En magasin"
+            hint="Comptoir, avoirs, avantages…"
+            count={channelStats.magCount}
+            total={channelStats.magTotal}
+            tone="navy"
+          />
+        </div>
+
         {/* Comptabilité — cartes expirées */}
         <ExpiredStatsPanel />
 
@@ -294,25 +355,52 @@ export default function AdminGiftCardsPage() {
           ))}
         </div>
 
+        {/* Filtre par canal : en ligne / en magasin */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-xs font-medium text-foreground/50">Canal :</span>
+          {CHANNELS.map((c) => (
+            <button
+              key={c.value}
+              onClick={() => setChannel(c.value)}
+              className={cn(
+                'rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors',
+                channel === c.value
+                  ? 'bg-foreground text-white'
+                  : 'bg-white text-foreground/70 ring-1 ring-foreground/10 hover:bg-beige'
+              )}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+
         {/* Liste */}
         <div className="mt-5 overflow-hidden rounded-xl border border-foreground/10 bg-white shadow-[var(--shadow-sm)]">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-20 text-sm text-foreground/60">
               <Loader2 className="size-4 animate-spin" /> Chargement…
             </div>
-          ) : cards.length === 0 ? (
+          ) : visibleCards.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-20 text-center">
               <span className="flex size-14 items-center justify-center rounded-full bg-beige text-sauge-deep">
                 <Gift className="size-6" />
               </span>
-              <p className="text-sm text-foreground/60">Aucune carte cadeau pour le moment.</p>
-              <button onClick={() => setShowCreate(true)} className={btnPrimary}>
-                <Plus className="size-4" /> Créer la première
-              </button>
+              <p className="text-sm text-foreground/60">
+                {statusFilter === 'deleted'
+                  ? 'La corbeille est vide.'
+                  : channel !== 'all'
+                    ? 'Aucune carte pour ce canal.'
+                    : 'Aucune carte cadeau pour le moment.'}
+              </p>
+              {statusFilter !== 'deleted' && channel === 'all' && (
+                <button onClick={() => setShowCreate(true)} className={btnPrimary}>
+                  <Plus className="size-4" /> Créer la première
+                </button>
+              )}
             </div>
           ) : (
             <ul className="divide-y divide-foreground/10">
-              {cards.map((c) => (
+              {visibleCards.map((c) => (
                 <li key={c._id} className="flex items-stretch">
                   <button
                     onClick={() => setDetail(c)}
@@ -335,6 +423,11 @@ export default function AdminGiftCardsPage() {
                         >
                           {STATUS_LABEL[c.status]}
                         </span>
+                        {c.deletedAt && (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                            Supprimée
+                          </span>
+                        )}
                       </div>
                       <p className="mt-0.5 truncate text-xs text-foreground/50">
                         {c.recipient?.name || c.recipient?.email || c.purchasedBy?.email || 'Sans destinataire'}
@@ -354,15 +447,26 @@ export default function AdminGiftCardsPage() {
                     </div>
                   </button>
 
-                  {/* Suppression définitive (bouton distinct pour ne pas imbriquer de boutons) */}
-                  <button
-                    onClick={() => deleteCard(c._id)}
-                    title="Supprimer définitivement"
-                    aria-label={`Supprimer la carte ${c.code}`}
-                    className="flex shrink-0 items-center justify-center border-l border-foreground/10 px-4 text-foreground/30 transition-colors hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  {/* Corbeille : mettre à la corbeille, ou restaurer si déjà dedans */}
+                  {c.deletedAt ? (
+                    <button
+                      onClick={() => restoreCard(c._id)}
+                      title="Restaurer"
+                      aria-label={`Restaurer la carte ${c.code}`}
+                      className="flex shrink-0 items-center justify-center border-l border-foreground/10 px-4 text-foreground/30 transition-colors hover:bg-sauge/10 hover:text-sauge-deep"
+                    >
+                      <RotateCcw className="size-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => deleteCard(c._id)}
+                      title="Mettre à la corbeille"
+                      aria-label={`Supprimer la carte ${c.code}`}
+                      className="flex shrink-0 items-center justify-center border-l border-foreground/10 px-4 text-foreground/30 transition-colors hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -382,6 +486,7 @@ export default function AdminGiftCardsPage() {
           onCancel={cancelCard}
           onReactivate={reactivateCard}
           onDelete={deleteCard}
+          onRestore={restoreCard}
         />
       )}
       {confirmState && (
@@ -500,6 +605,39 @@ function StatCard({
       </span>
       <p className="mt-3 font-display text-3xl font-medium leading-none text-foreground">{value}</p>
       <p className="mt-1.5 text-xs text-foreground/55">{label}</p>
+    </div>
+  )
+}
+
+/* ---------- Carte de stat par canal (en ligne / en magasin) ---------- */
+function ChannelCard({
+  label,
+  hint,
+  count,
+  total,
+  tone,
+}: {
+  label: string
+  hint: string
+  count: number
+  total: number
+  tone: 'sauge' | 'navy'
+}) {
+  return (
+    <div className="rounded-xl border border-foreground/10 bg-white p-4 shadow-[var(--shadow-sm)] sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-foreground/55">{label}</p>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
+            tone === 'sauge' ? 'bg-sauge/15 text-sauge-deep' : 'bg-foreground/10 text-foreground/70'
+          )}
+        >
+          {count} carte{count > 1 ? 's' : ''}
+        </span>
+      </div>
+      <p className="mt-2 font-display text-3xl font-medium leading-none text-foreground">{eur(total)}</p>
+      <p className="mt-1.5 text-xs text-foreground/50">{hint} · total émis</p>
     </div>
   )
 }
@@ -1022,12 +1160,14 @@ function DetailModal({
   onCancel,
   onReactivate,
   onDelete,
+  onRestore,
 }: {
   card: GiftCard
   onClose: () => void
   onCancel: (id: string) => void
   onReactivate: (id: string) => void
   onDelete: (id: string) => void
+  onRestore: (id: string) => void
 }) {
   const [pdfBusy, setPdfBusy] = useState<'preview' | 'download' | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
@@ -1167,23 +1307,32 @@ function DetailModal({
         </div>
 
         <div className="space-y-2.5">
-          {card.status === 'cancelled' ? (
-            <button onClick={() => onReactivate(card._id)} className={cn(btnPrimary, 'w-full')}>
-              <RefreshCw className="size-4" /> Réactiver la carte
+          {card.deletedAt ? (
+            // Carte dans la corbeille : seule action = la restaurer.
+            <button onClick={() => onRestore(card._id)} className={cn(btnPrimary, 'w-full')}>
+              <RotateCcw className="size-4" /> Restaurer la carte
             </button>
           ) : (
-            <button onClick={() => onCancel(card._id)} className={btnDanger}>
-              <Ban className="size-4" /> Annuler la carte
-            </button>
-          )}
+            <>
+              {card.status === 'cancelled' ? (
+                <button onClick={() => onReactivate(card._id)} className={cn(btnPrimary, 'w-full')}>
+                  <RefreshCw className="size-4" /> Réactiver la carte
+                </button>
+              ) : (
+                <button onClick={() => onCancel(card._id)} className={btnDanger}>
+                  <Ban className="size-4" /> Annuler la carte
+                </button>
+              )}
 
-          {/* Suppression définitive (irréversible), distincte de l'annulation. */}
-          <button
-            onClick={() => onDelete(card._id)}
-            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md text-sm font-medium text-foreground/50 transition-colors hover:bg-red-50 hover:text-red-600"
-          >
-            <Trash2 className="size-4" /> Supprimer définitivement
-          </button>
+              {/* Suppression = mise à la corbeille (réversible via le filtre « Supprimées »). */}
+              <button
+                onClick={() => onDelete(card._id)}
+                className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md text-sm font-medium text-foreground/50 transition-colors hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="size-4" /> Supprimer
+              </button>
+            </>
+          )}
         </div>
       </div>
     </Modal>

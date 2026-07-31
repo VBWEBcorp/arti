@@ -170,7 +170,14 @@ export async function getAllGiftCards(
   const skip = (page - 1) * limit
 
   const query: Record<string, unknown> = {}
-  if (filters.status) query.status = filters.status
+  // Corbeille : le filtre « deleted » ne montre QUE les cartes supprimées ;
+  // sinon on exclut toujours la corbeille des listes normales.
+  if (filters.status === 'deleted') {
+    query.deletedAt = { $ne: null }
+  } else {
+    query.deletedAt = null
+    if (filters.status) query.status = filters.status
+  }
   if (filters.search) {
     const escaped = escapeRegex(filters.search)
     query.$or = [
@@ -219,7 +226,8 @@ export async function getExpiredStats(
   }
 
   const [agg] = await GiftCard.aggregate([
-    { $match: { expiresAt, status: { $in: ['active', 'expired'] } } },
+    // deletedAt: null couvre aussi les cartes sans le champ (créées avant la corbeille).
+    { $match: { expiresAt, status: { $in: ['active', 'expired'] }, deletedAt: null } },
     {
       $group: {
         _id: null,
@@ -247,7 +255,7 @@ export async function getGiftCardById(id: string): Promise<IGiftCard> {
 export async function checkBalance(code: string) {
   await connectDB()
   const giftCard = await GiftCard.findOne({ code: code.toUpperCase().trim() })
-  if (!giftCard) throw new GiftCardError('Carte cadeau introuvable', 404)
+  if (!giftCard || giftCard.deletedAt) throw new GiftCardError('Carte cadeau introuvable', 404)
 
   // Marque le statut « expirée » pour l'info / la compta, MAIS la carte reste
   // honorée (utilisable) : on ne bloque plus une carte simplement expirée.
@@ -288,7 +296,7 @@ export async function redeemOnSite(
   const normalized = code.toUpperCase().trim()
 
   const card = await GiftCard.findOne({ code: normalized })
-  if (!card) throw new GiftCardError('Carte cadeau introuvable', 404)
+  if (!card || card.deletedAt) throw new GiftCardError('Carte cadeau introuvable', 404)
 
   if (card.status === 'used') throw new GiftCardError('Cette carte cadeau est déjà épuisée')
   if (card.status === 'cancelled') throw new GiftCardError('Cette carte cadeau est annulée')
@@ -402,9 +410,21 @@ export async function reactivateGiftCard(
 export async function deleteGiftCard(id: string): Promise<void> {
   await connectDB()
   if (!mongoose.isValidObjectId(id)) throw new GiftCardError('Carte cadeau introuvable', 404)
-  const deleted = await GiftCard.findByIdAndDelete(id)
-  if (!deleted) throw new GiftCardError('Carte cadeau introuvable', 404)
-  console.log(`[giftcard] supprimée définitivement ${deleted.code}`)
+  // Soft delete : la carte n'est PAS effacée — elle passe dans la corbeille
+  // (filtre « Supprimées »), consultable et restaurable, et sort des stats.
+  const card = await GiftCard.findByIdAndUpdate(id, { deletedAt: new Date() }, { new: true })
+  if (!card) throw new GiftCardError('Carte cadeau introuvable', 404)
+  console.log(`[giftcard] mise à la corbeille ${card.code}`)
+}
+
+/** Restaure une carte depuis la corbeille (annule le soft delete). */
+export async function restoreGiftCard(id: string): Promise<IGiftCard> {
+  await connectDB()
+  if (!mongoose.isValidObjectId(id)) throw new GiftCardError('Carte cadeau introuvable', 404)
+  const card = await GiftCard.findByIdAndUpdate(id, { deletedAt: null }, { new: true })
+  if (!card) throw new GiftCardError('Carte cadeau introuvable', 404)
+  console.log(`[giftcard] restaurée depuis la corbeille ${card.code}`)
+  return card
 }
 
 type PurchaseData = {
