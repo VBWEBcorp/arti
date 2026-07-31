@@ -534,6 +534,62 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;')
 }
 
+/** Adresse de la boutique, prévenue à chaque nouvelle commande en ligne. */
+const SHOP_EMAIL = process.env.CONTACT_EMAIL || 'hello@articafeceramique.fr'
+
+/** Email interne de notification de vente (récap de la commande pour la boutique). */
+function shopSaleHtml(giftCard: IGiftCard): string {
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:7px 0;color:#7a7f78;font-size:13px;vertical-align:top;">${label}</td>` +
+    `<td style="padding:7px 0;color:#1f2421;font-size:14px;font-weight:600;text-align:right;">${value}</td></tr>`
+  const buyer = escapeHtml(giftCard.purchasedBy?.name || '—')
+  const buyerEmail = escapeHtml(giftCard.purchasedBy?.email || '—')
+  const recipient =
+    giftCard.recipient?.name || giftCard.recipient?.email
+      ? escapeHtml(
+          `${giftCard.recipient?.name || ''}${
+            giftCard.recipient?.email ? ` <${giftCard.recipient.email}>` : ''
+          }`.trim()
+        )
+      : "L'acheteur lui-même"
+  const message = giftCard.recipient?.message ? `« ${escapeHtml(giftCard.recipient.message)} »` : '—'
+  const receipt = giftCard.stripeReceiptUrl
+    ? `<p style="margin:18px 0 0;"><a href="${giftCard.stripeReceiptUrl}" style="color:#5f6b53;font-size:13px;">Voir le reçu Stripe →</a></p>`
+    : ''
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="color-scheme" content="light only"></head>
+<body style="margin:0;padding:0;background:#f1efe9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1efe9;">
+    <tr><td align="center" style="padding:26px 14px;">
+      <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:520px;max-width:100%;background:#ffffff;border-radius:14px;overflow:hidden;">
+        <tr><td style="background:#7d8a6f;padding:24px 28px;">
+          <div style="color:#ffffff;font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.85;">Nouvelle vente en ligne</div>
+          <div style="margin-top:5px;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:23px;">Carte cadeau ${eur(giftCard.initialAmount)}</div>
+        </td></tr>
+        <tr><td style="padding:22px 28px 6px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${row('Code', `<span style="font-family:'Courier New',monospace;letter-spacing:1px;">${giftCard.code}</span>`)}
+            ${row('Montant', eur(giftCard.initialAmount))}
+            ${row('Acheteur', buyer)}
+            ${row('Email acheteur', buyerEmail)}
+            ${row('Destinataire', recipient)}
+            ${row('Message', message)}
+            ${row('Date', frDate(giftCard.createdAt || new Date()))}
+          </table>
+          ${receipt}
+        </td></tr>
+        <tr><td style="padding:18px 28px 26px;">
+          <p style="margin:0;font-size:12px;line-height:1.6;color:#a7aaa4;border-top:1px solid #f0eee9;padding-top:16px;">
+            Notification automatique — la carte + le PDF ont déjà été envoyés au client. Cet email vous sert de copie pour vos archives.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+}
+
 /** Envoi des emails de carte cadeau (acheteur + destinataire) via Resend. */
 async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
   // On joint la carte au format PDF (recto illustré + verso : numéro, montant,
@@ -589,6 +645,23 @@ async function sendGiftCardEmails(giftCard: IGiftCard): Promise<void> {
       attachments,
       replyTo: giftCard.purchasedBy?.email || undefined,
     })
+  }
+
+  // Notification interne : la boutique (hello@) est prévenue de CHAQUE commande
+  // en ligne. Les cartes créées au comptoir/admin par le staff ne déclenchent
+  // rien (ils les créent eux-mêmes). Échec non bloquant comme les autres envois.
+  if (giftCard.source === 'online') {
+    try {
+      await sendEmail({
+        to: SHOP_EMAIL,
+        subject: `🎁 Nouvelle carte cadeau vendue — ${eur(giftCard.initialAmount)} (${giftCard.code})`,
+        html: shopSaleHtml(giftCard),
+        attachments,
+        replyTo: giftCard.purchasedBy?.email || undefined,
+      })
+    } catch (err) {
+      console.error('[giftcard] notification boutique échouée:', (err as Error).message)
+    }
   }
 
   giftCard.emailSent = true
