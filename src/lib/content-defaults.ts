@@ -203,6 +203,8 @@ export type Ceramic = {
   category: string
   price: string
   alt: string
+  /** Marquée « plus en stock » depuis l'admin → sticker « Épuisé » sur le site. */
+  soldOut?: boolean
 }
 
 export const artiCeramiquesDefaults = {

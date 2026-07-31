@@ -7,6 +7,7 @@ import { FieldEditor, SectionEditor, ImageField } from '@/components/admin/field
 import { PhotoGalleryField } from '@/components/admin/photo-gallery-field'
 import { Button } from '@/components/ui/button'
 import { artiCeramiquesDefaults, type Ceramic } from '@/lib/content-defaults'
+import { cn } from '@/lib/utils'
 
 type CeramicTextKey = 'name' | 'category' | 'price' | 'alt'
 
@@ -28,6 +29,12 @@ export default function AdminArtiCeramiquesPage() {
         const setImages = (i: number, imgs: string[]) => {
           const next = [...items]
           next[i] = { ...next[i], images: imgs }
+          setItems(next)
+        }
+        // Bascule « en stock » ⇄ « épuisé » en un clic.
+        const toggleSoldOut = (i: number) => {
+          const next = [...items]
+          next[i] = { ...next[i], soldOut: !next[i].soldOut }
           setItems(next)
         }
         const moveItem = (i: number, dir: -1 | 1) => {
@@ -139,6 +146,31 @@ export default function AdminArtiCeramiquesPage() {
                             {images.length ? ` · ${images.length} photo${images.length > 1 ? 's' : ''}` : ''}
                           </p>
                         </div>
+
+                        {/* Stock : 1 clic pour marquer « plus en stock » (sticker sur le site) */}
+                        <button
+                          type="button"
+                          onClick={() => toggleSoldOut(i)}
+                          title={
+                            item.soldOut
+                              ? 'Cliquer pour remettre en stock'
+                              : 'Cliquer pour marquer « plus en stock »'
+                          }
+                          className={cn(
+                            'inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors',
+                            item.soldOut
+                              ? 'bg-terracotta/15 text-terracotta hover:bg-terracotta/25'
+                              : 'text-muted-foreground hover:bg-muted'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'size-2 rounded-full',
+                              item.soldOut ? 'bg-terracotta' : 'bg-emerald-500'
+                            )}
+                          />
+                          {item.soldOut ? 'Épuisé' : 'En stock'}
+                        </button>
 
                         <Button
                           variant="destructive"

@@ -47,11 +47,20 @@ function CeramicCard({ c }: { c: Ceramic }) {
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
+        {/* Sticker « Épuisé » quand la pièce est marquée plus en stock */}
+        {c.soldOut && (
+          <span className="absolute left-2 top-2 z-20 rounded-full bg-terracotta px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white shadow-sm">
+            Épuisé
+          </span>
+        )}
         {count > 0 ? (
           <>
             {/* Piste qui défile horizontalement */}
             <div
-              className="absolute inset-0 flex transition-transform duration-500 ease-out"
+              className={cn(
+                'absolute inset-0 flex transition-transform duration-500 ease-out',
+                c.soldOut && 'opacity-60'
+              )}
               style={{ transform: `translateX(-${current * 100}%)` }}
             >
               {photos.map((src, i) => (
