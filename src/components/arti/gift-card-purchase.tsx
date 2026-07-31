@@ -11,7 +11,7 @@ import {
   Mail,
   ShieldCheck,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { GiftCardVisual } from '@/components/arti/gift-card-visual'
 import { StripePaymentForm } from '@/components/arti/stripe-payment-form'
@@ -55,6 +55,9 @@ export function GiftCardPurchase() {
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState<PurchaseResult | null>(null)
   const [copied, setCopied] = useState(false)
+  // Ancres pour amener l'internaute sur l'encart de paiement / la confirmation.
+  const paymentRef = useRef<HTMLDivElement>(null)
+  const confirmRef = useRef<HTMLDivElement>(null)
 
   // Formulaire
   const [amount, setAmount] = useState<number>(30)
@@ -98,6 +101,14 @@ export function GiftCardPurchase() {
         if (param && FALLBACK.presets.includes(param)) setAmount(param)
       })
   }, [])
+
+  // UX : au passage au paiement (étape 2) ou à la confirmation (étape 3), on
+  // fait défiler la page jusqu'à l'encart concerné au lieu de laisser le
+  // visiteur en haut de page.
+  useEffect(() => {
+    const el = step === 3 ? confirmRef.current : step === 2 ? paymentRef.current : null
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [step])
 
   const effectiveAmount = amount
 
@@ -178,7 +189,7 @@ export function GiftCardPurchase() {
   // ===== Confirmation =====
   if (step === 3 && result) {
     return (
-      <div className="mx-auto max-w-xl text-center">
+      <div ref={confirmRef} className="mx-auto max-w-xl scroll-mt-24 text-center">
         <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-sauge text-white">
           <Check className="size-7" />
         </span>
@@ -436,7 +447,7 @@ export function GiftCardPurchase() {
 
       {/* ===== Étape 2 ===== */}
       {step === 2 && (
-        <div className="mx-auto max-w-md space-y-5">
+        <div ref={paymentRef} className="mx-auto max-w-md scroll-mt-24 space-y-5">
           <div className="border border-foreground/10 bg-beige-light p-5 text-center">
             <p className="text-xs text-foreground/60">Carte cadeau de</p>
             <p className="font-display text-4xl font-medium text-foreground">{eur(effectiveAmount)}</p>
