@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    if (!purchaser.name || !purchaser.email || !emailRe.test(purchaser.email)) {
+    if (!purchaser.firstName || !purchaser.lastName || !purchaser.email || !emailRe.test(purchaser.email)) {
       return NextResponse.json(
-        { error: 'Le nom et un email valide de l’acheteur sont requis' },
+        { error: 'Le prénom, le nom et un email valide de l’acheteur sont requis' },
         { status: 400 }
       )
     }
@@ -40,9 +40,15 @@ export async function POST(request: NextRequest) {
     const giftCard = await purchaseGiftCard(
       {
         amount,
-        purchaser: { name: purchaser.name, email: purchaser.email, userId: user?.userId || null },
+        purchaser: {
+          firstName: purchaser.firstName,
+          lastName: purchaser.lastName,
+          email: purchaser.email,
+          userId: user?.userId || null,
+        },
         recipient: {
-          name: recipient.name || undefined,
+          firstName: recipient.firstName || undefined,
+          lastName: recipient.lastName || undefined,
           email: recipient.email || undefined,
           message: recipient.message || undefined,
         },

@@ -60,8 +60,8 @@ export function GiftCardPurchase() {
   const [amount, setAmount] = useState<number>(30)
   // Texte du champ « montant libre » (vide tant qu'un preset est choisi).
   const [customText, setCustomText] = useState('')
-  const [purchaser, setPurchaser] = useState({ name: '', email: '' })
-  const [recipient, setRecipient] = useState({ name: '', email: '', message: '' })
+  const [purchaser, setPurchaser] = useState({ firstName: '', lastName: '', email: '' })
+  const [recipient, setRecipient] = useState({ firstName: '', lastName: '', email: '', message: '' })
 
   // Arrondit à la tranche de 10 € et borne entre 50 € et le plafond.
   const clampCustom = (n: number) =>
@@ -106,8 +106,9 @@ export function GiftCardPurchase() {
     if (effectiveAmount < config.min || effectiveAmount > config.max) {
       errs.push(`Le montant doit être entre ${eur(config.min)} et ${eur(config.max)}.`)
     }
-    if (!purchaser.name.trim()) errs.push("Votre nom est requis.")
-    if (!emailRe.test(purchaser.email.trim())) errs.push("Votre email est invalide.")
+    if (!purchaser.firstName.trim()) errs.push('Votre prénom est requis.')
+    if (!purchaser.lastName.trim()) errs.push('Votre nom est requis.')
+    if (!emailRe.test(purchaser.email.trim())) errs.push('Votre email est invalide.')
     if (recipient.email && !emailRe.test(recipient.email.trim())) {
       errs.push("L'email du destinataire est invalide.")
     }
@@ -136,9 +137,14 @@ export function GiftCardPurchase() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: effectiveAmount,
-          purchaser: { name: purchaser.name.trim(), email: purchaser.email.trim() },
+          purchaser: {
+            firstName: purchaser.firstName.trim(),
+            lastName: purchaser.lastName.trim(),
+            email: purchaser.email.trim(),
+          },
           recipient: {
-            name: recipient.name.trim() || undefined,
+            firstName: recipient.firstName.trim() || undefined,
+            lastName: recipient.lastName.trim() || undefined,
             email: recipient.email.trim() || undefined,
             message: recipient.message.trim() || undefined,
           },
@@ -340,13 +346,22 @@ export function GiftCardPurchase() {
               Vous recevrez la confirmation d&apos;achat avec le code.
             </p>
             <div className="mt-3 space-y-2">
-              <input
-                type="text"
-                value={purchaser.name}
-                onChange={(e) => setPurchaser((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Votre nom *"
-                className="w-full border border-foreground/15 bg-white px-3 py-2.5 text-sm focus:border-sauge focus:outline-none"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={purchaser.firstName}
+                  onChange={(e) => setPurchaser((p) => ({ ...p, firstName: e.target.value }))}
+                  placeholder="Votre prénom *"
+                  className="w-full border border-foreground/15 bg-white px-3 py-2.5 text-sm focus:border-sauge focus:outline-none"
+                />
+                <input
+                  type="text"
+                  value={purchaser.lastName}
+                  onChange={(e) => setPurchaser((p) => ({ ...p, lastName: e.target.value }))}
+                  placeholder="Votre nom *"
+                  className="w-full border border-foreground/15 bg-white px-3 py-2.5 text-sm focus:border-sauge focus:outline-none"
+                />
+              </div>
               <input
                 type="email"
                 value={purchaser.email}
@@ -366,13 +381,22 @@ export function GiftCardPurchase() {
               Sans destinataire, le code vous est envoyé pour le transmettre vous-même.
             </p>
             <div className="mt-3 space-y-2">
-              <input
-                type="text"
-                value={recipient.name}
-                onChange={(e) => setRecipient((r) => ({ ...r, name: e.target.value }))}
-                placeholder="Prénom du destinataire"
-                className="w-full border border-foreground/15 bg-white px-3 py-2.5 text-sm focus:border-sauge focus:outline-none"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={recipient.firstName}
+                  onChange={(e) => setRecipient((r) => ({ ...r, firstName: e.target.value }))}
+                  placeholder="Prénom du destinataire"
+                  className="w-full border border-foreground/15 bg-white px-3 py-2.5 text-sm focus:border-sauge focus:outline-none"
+                />
+                <input
+                  type="text"
+                  value={recipient.lastName}
+                  onChange={(e) => setRecipient((r) => ({ ...r, lastName: e.target.value }))}
+                  placeholder="Nom du destinataire"
+                  className="w-full border border-foreground/15 bg-white px-3 py-2.5 text-sm focus:border-sauge focus:outline-none"
+                />
+              </div>
               <input
                 type="email"
                 value={recipient.email}
@@ -416,8 +440,10 @@ export function GiftCardPurchase() {
           <div className="border border-foreground/10 bg-beige-light p-5 text-center">
             <p className="text-xs text-foreground/60">Carte cadeau de</p>
             <p className="font-display text-4xl font-medium text-foreground">{eur(effectiveAmount)}</p>
-            {recipient.name && (
-              <p className="mt-1 text-xs text-foreground/60">Pour {recipient.name}</p>
+            {(recipient.firstName || recipient.lastName) && (
+              <p className="mt-1 text-xs text-foreground/60">
+                Pour {`${recipient.firstName} ${recipient.lastName}`.trim()}
+              </p>
             )}
           </div>
 
@@ -427,9 +453,14 @@ export function GiftCardPurchase() {
               <StripePaymentForm
                 amount={effectiveAmount}
                 publishableKey={config.stripePublishableKey}
-                purchaser={{ name: purchaser.name.trim(), email: purchaser.email.trim() }}
+                purchaser={{
+                  firstName: purchaser.firstName.trim(),
+                  lastName: purchaser.lastName.trim(),
+                  email: purchaser.email.trim(),
+                }}
                 recipient={{
-                  name: recipient.name.trim(),
+                  firstName: recipient.firstName.trim(),
+                  lastName: recipient.lastName.trim(),
                   email: recipient.email.trim(),
                   message: recipient.message.trim(),
                 }}

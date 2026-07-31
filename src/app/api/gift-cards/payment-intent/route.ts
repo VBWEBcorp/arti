@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    if (!purchaser.name || !purchaser.email || !emailRe.test(purchaser.email)) {
+    if (!purchaser.firstName || !purchaser.lastName || !purchaser.email || !emailRe.test(purchaser.email)) {
       return NextResponse.json(
-        { error: 'Le nom et un email valide de l’acheteur sont requis' },
+        { error: 'Le prénom, le nom et un email valide de l’acheteur sont requis' },
         { status: 400 }
       )
     }
@@ -45,10 +45,12 @@ export async function POST(request: NextRequest) {
     const metadata: Record<string, string> = {
       kind: 'gift_card',
       amount_euros: String(amount),
-      purchaser_name: String(purchaser.name).slice(0, 200),
+      purchaser_first_name: String(purchaser.firstName).slice(0, 200),
+      purchaser_last_name: String(purchaser.lastName).slice(0, 200),
       purchaser_email: String(purchaser.email).slice(0, 200),
     }
-    if (recipient.name) metadata.recipient_name = String(recipient.name).slice(0, 200)
+    if (recipient.firstName) metadata.recipient_first_name = String(recipient.firstName).slice(0, 200)
+    if (recipient.lastName) metadata.recipient_last_name = String(recipient.lastName).slice(0, 200)
     if (recipient.email) metadata.recipient_email = String(recipient.email).slice(0, 200)
     if (recipient.message) metadata.recipient_message = String(recipient.message).slice(0, 200)
 

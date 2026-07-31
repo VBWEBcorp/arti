@@ -43,9 +43,14 @@ export async function POST(request: NextRequest) {
         const card = await purchaseGiftCard(
           {
             amount: Number(md.amount_euros),
-            purchaser: { name: md.purchaser_name, email: md.purchaser_email },
+            purchaser: {
+              firstName: md.purchaser_first_name,
+              lastName: md.purchaser_last_name,
+              email: md.purchaser_email,
+            },
             recipient: {
-              name: md.recipient_name || undefined,
+              firstName: md.recipient_first_name || undefined,
+              lastName: md.recipient_last_name || undefined,
               email: md.recipient_email || undefined,
               message: md.recipient_message || undefined,
             },

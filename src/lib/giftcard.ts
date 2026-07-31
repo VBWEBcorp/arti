@@ -72,11 +72,43 @@ function sourceDescription(source: GiftCardSource): string {
   return labels[source] || 'Création manuelle par admin'
 }
 
+/**
+ * Normalise une personne (acheteur/destinataire) : conserve prénom + nom
+ * séparés ET calcule un `name` complet (« Prénom Nom ») pour l'affichage et la
+ * rétro-compatibilité (emails, PDF, recherche s'appuient sur `name`).
+ */
+function buildParty(
+  p:
+    | {
+        firstName?: string
+        lastName?: string
+        name?: string
+        email?: string
+        userId?: string | null
+        message?: string
+      }
+    | undefined,
+  opts: { keepMessage?: boolean } = {}
+): Record<string, unknown> {
+  if (!p) return {}
+  const firstName = p.firstName?.trim() || undefined
+  const lastName = p.lastName?.trim() || undefined
+  const name = [firstName, lastName].filter(Boolean).join(' ') || p.name?.trim() || undefined
+  const out: Record<string, unknown> = {}
+  if (firstName) out.firstName = firstName
+  if (lastName) out.lastName = lastName
+  if (name) out.name = name
+  if (p.email?.trim()) out.email = p.email.trim()
+  if (p.userId) out.userId = p.userId
+  if (opts.keepMessage && p.message?.trim()) out.message = p.message.trim()
+  return out
+}
+
 type CreateData = {
   initialAmount: number
   source?: GiftCardSource
-  purchasedBy?: { userId?: string | null; email?: string; name?: string }
-  recipient?: { name?: string; email?: string; message?: string }
+  purchasedBy?: { userId?: string | null; email?: string; name?: string; firstName?: string; lastName?: string }
+  recipient?: { name?: string; email?: string; message?: string; firstName?: string; lastName?: string }
   stripePaymentIntentId?: string | null
   stripeReceiptUrl?: string | null
   expiresAt?: Date | null
@@ -96,8 +128,8 @@ export async function createGiftCard(data: CreateData, adminId: string | null = 
     balance: data.initialAmount,
     currency: 'EUR',
     status: 'active',
-    purchasedBy: data.purchasedBy || {},
-    recipient: data.recipient || {},
+    purchasedBy: buildParty(data.purchasedBy),
+    recipient: buildParty(data.recipient, { keepMessage: true }),
     imageUrl: data.imageUrl || null,
     stripePaymentIntentId: data.stripePaymentIntentId || null,
     stripeReceiptUrl: data.stripeReceiptUrl || null,
@@ -377,8 +409,8 @@ export async function deleteGiftCard(id: string): Promise<void> {
 
 type PurchaseData = {
   amount: number
-  purchaser?: { name?: string; email?: string; userId?: string | null }
-  recipient?: { name?: string; email?: string; message?: string }
+  purchaser?: { name?: string; email?: string; userId?: string | null; firstName?: string; lastName?: string }
+  recipient?: { name?: string; email?: string; message?: string; firstName?: string; lastName?: string }
 }
 
 /** Achat en ligne : vérifie le paiement Stripe (ou mode test) puis crée la carte. */

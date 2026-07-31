@@ -26,8 +26,8 @@ export interface IGiftCard extends Document {
   balance: number
   currency: string
   status: GiftCardStatus
-  purchasedBy: { userId?: mongoose.Types.ObjectId | string | null; email?: string; name?: string }
-  recipient: { name?: string; email?: string; message?: string }
+  purchasedBy: { userId?: mongoose.Types.ObjectId | string | null; email?: string; name?: string; firstName?: string; lastName?: string }
+  recipient: { name?: string; email?: string; message?: string; firstName?: string; lastName?: string }
   imageUrl?: string | null
   emailSent: boolean
   stripePaymentIntentId?: string | null
@@ -58,13 +58,19 @@ const GiftCardSchema = new Schema<IGiftCard>(
     purchasedBy: {
       userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
       email: String,
+      // `name` = nom complet composé (« Prénom Nom ») conservé pour l'affichage
+      // et la rétro-compatibilité ; prénom et nom sont aussi stockés séparément.
       name: String,
+      firstName: String,
+      lastName: String,
     },
 
     recipient: {
       name: String,
       email: String,
       message: String,
+      firstName: String,
+      lastName: String,
     },
 
     imageUrl: { type: String, default: null },

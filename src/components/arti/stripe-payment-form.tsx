@@ -25,8 +25,8 @@ function getStripePromise(publishableKey: string) {
   return stripePromise
 }
 
-type Purchaser = { name: string; email: string }
-type Recipient = { name: string; email: string; message: string }
+type Purchaser = { firstName: string; lastName: string; email: string }
+type Recipient = { firstName: string; lastName: string; email: string; message: string }
 
 type Props = {
   amount: number

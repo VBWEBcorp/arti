@@ -655,9 +655,11 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const AMOUNTS = [15, 20, 25, 30, 40, 50]
   const [amount, setAmount] = useState('30')
   const [source, setSource] = useState('on_site')
-  const [buyerName, setBuyerName] = useState('')
+  const [buyerFirstName, setBuyerFirstName] = useState('')
+  const [buyerLastName, setBuyerLastName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
-  const [recipientName, setRecipientName] = useState('')
+  const [recipientFirstName, setRecipientFirstName] = useState('')
+  const [recipientLastName, setRecipientLastName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [message, setMessage] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
@@ -674,8 +676,17 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         body: JSON.stringify({
           initialAmount: Number(amount),
           source: source === 'admin' ? undefined : source,
-          purchasedBy: { name: buyerName || undefined, email: buyerEmail || undefined },
-          recipient: { name: recipientName || undefined, email: recipientEmail || undefined, message: message || undefined },
+          purchasedBy: {
+            firstName: buyerFirstName || undefined,
+            lastName: buyerLastName || undefined,
+            email: buyerEmail || undefined,
+          },
+          recipient: {
+            firstName: recipientFirstName || undefined,
+            lastName: recipientLastName || undefined,
+            email: recipientEmail || undefined,
+            message: message || undefined,
+          },
           expiresAt: expiresAt || undefined,
         }),
       })
@@ -746,28 +757,32 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           </div>
         </Section>
 
-        <Section title="Acheteur" hint="Reçoit l'email de confirmation si renseigné.">
+        <Section title="Acheteur" hint="Facultatif. Reçoit l'email de confirmation si renseigné.">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Nom</label>
-              <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} className={inputCls} />
+              <label className={labelCls}>Prénom</label>
+              <input value={buyerFirstName} onChange={(e) => setBuyerFirstName(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Email</label>
-              <input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} className={inputCls} />
+              <label className={labelCls}>Nom</label>
+              <input value={buyerLastName} onChange={(e) => setBuyerLastName(e.target.value)} className={inputCls} />
             </div>
+          </div>
+          <div>
+            <label className={labelCls}>Email</label>
+            <input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} className={inputCls} />
           </div>
         </Section>
 
-        <Section title="Destinataire" hint="Optionnel. Reçoit la carte par email si une adresse est renseignée.">
+        <Section title="Destinataire" hint="Facultatif. Reçoit la carte par email si une adresse est renseignée.">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Nom</label>
-              <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className={inputCls} />
+              <label className={labelCls}>Prénom</label>
+              <input value={recipientFirstName} onChange={(e) => setRecipientFirstName(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Email</label>
-              <input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className={inputCls} />
+              <label className={labelCls}>Nom</label>
+              <input value={recipientLastName} onChange={(e) => setRecipientLastName(e.target.value)} className={inputCls} />
             </div>
           </div>
           <div>
