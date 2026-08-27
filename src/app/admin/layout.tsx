@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { AdminSidebar, MobileMenuButton } from '@/components/admin/sidebar'
 import { SidebarProvider, useSidebar } from '@/components/admin/sidebar-context'
+import { clearSession, hasValidSession } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 const publicPaths = ['/admin/login', '/admin/register']
@@ -33,18 +34,27 @@ export default function AdminLayout({
   const isPublicPage = publicPaths.includes(pathname)
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken')
+    // On teste la VALIDITÉ du jeton, pas sa simple présence : un jeton expiré
+    // reste dans localStorage et faisait passer l'admin pour connectée alors
+    // que le serveur refusait déjà toutes ses requêtes (401).
+    const valid = hasValidSession()
+
+    // Session morte : on la purge tout de suite. C'est ce qui casse le
+    // ping-pong page protégée → /admin/login → tableau de bord, qui ramenait
+    // l'admin au tableau de bord sans jamais lui montrer ses données.
+    if (!valid) clearSession()
 
     if (isPublicPage) {
-      if (token) {
-        router.push('/admin/dashboard')
+      if (valid) {
+        router.replace('/admin/dashboard')
+        return
       }
       setLoading(false)
       return
     }
 
-    if (!token) {
-      router.push('/admin/login')
+    if (!valid) {
+      router.replace('/admin/login?expired=1')
       return
     }
 

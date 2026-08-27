@@ -25,3 +25,6 @@ npm-debug.log*
 
 # Uploads
 public/uploads/
+
+# Local Netlify folder
+.netlify

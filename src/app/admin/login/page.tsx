@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -16,8 +16,16 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [expired, setExpired] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  // Arrivée depuis une session expirée : on l'annonce clairement au lieu de
+  // laisser croire à une panne. Lu depuis l'URL sans useSearchParams pour ne
+  // pas imposer de frontière Suspense à cette page.
+  useEffect(() => {
+    setExpired(new URLSearchParams(window.location.search).get('expired') === '1')
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,7 +48,7 @@ export default function AdminLoginPage() {
       localStorage.setItem('authToken', data.token)
       localStorage.setItem('authUser', JSON.stringify(data.user))
 
-      router.push('/admin/dashboard')
+      router.replace('/admin/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de connexion')
     } finally {
@@ -112,6 +120,13 @@ export default function AdminLoginPage() {
             <p className="mt-2 text-sm text-foreground/60">
               Connectez-vous pour gérer le contenu du site.
             </p>
+
+            {expired && (
+              <div className="mt-5 rounded-md border border-sauge/30 bg-sauge/10 px-3 py-2.5 text-sm text-sauge-deep">
+                Votre session a expiré. Reconnectez-vous pour retrouver vos cartes
+                cadeaux et le reste de votre espace.
+              </div>
+            )}
 
             <form onSubmit={handleLogin} className="mt-7 space-y-4">
               <div>

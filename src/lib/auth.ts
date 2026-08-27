@@ -9,8 +9,14 @@ export interface JWTPayload {
   role: string
 }
 
+// Durée de vie du jeton admin. 30 jours plutôt que 7 : l'espace n'est utilisé
+// que ponctuellement (quelques passages par mois), et une expiration trop
+// courte reconnectait sans cesse. L'expiration reste réelle — le navigateur la
+// détecte désormais et propose la reconnexion au lieu de rester bloqué.
+const TOKEN_TTL = '30d'
+
 export function generateToken(payload: Omit<JWTPayload, 'iat' | 'exp'>) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_TTL })
 }
 
 export function verifyToken(token: string): JWTPayload | null {

@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
   Ban,
@@ -23,6 +22,7 @@ import {
 } from 'lucide-react'
 
 import { GiftCardVisual } from '@/components/arti/gift-card-visual'
+import { authHeaders, endSession, hasValidSession } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 const eur = (n: number) =>
@@ -94,13 +94,7 @@ const CHANNELS = [
 // avoir, avantage, offert) = « En magasin ».
 const isOnline = (c: GiftCard) => c.source === 'online'
 
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-}
-
 export default function AdminGiftCardsPage() {
-  const router = useRouter()
   const [cards, setCards] = useState<GiftCard[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -119,34 +113,49 @@ export default function AdminGiftCardsPage() {
   } | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ limit: '200' })
+      // Limite large : l'admin doit voir TOUTES ses cartes, pas une page.
+      const params = new URLSearchParams({ limit: '1000' })
       if (search.trim()) params.set('search', search.trim())
       if (statusFilter) params.set('status', statusFilter)
       const res = await fetch(`/api/gift-cards?${params}`, { headers: authHeaders() })
+      // Session morte : on la purge avant de renvoyer vers la connexion. Sans
+      // cette purge, le jeton expiré restait en place et /admin/login
+      // rebasculait aussitôt sur le tableau de bord — la liste n'apparaissait
+      // jamais.
       if (res.status === 401) {
-        router.push('/admin/login')
+        endSession()
         return
       }
       const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Chargement impossible.')
       setCards(data.giftCards || [])
+      setLoadError(null)
     } catch (err) {
       console.error(err)
+      // Une erreur serveur ne doit plus se traduire par une liste vide et
+      // silencieuse : on le dit.
+      setLoadError(
+        err instanceof TypeError
+          ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
+          : (err as Error).message
+      )
     } finally {
       setLoading(false)
     }
-  }, [search, statusFilter, router])
+  }, [search, statusFilter])
 
   useEffect(() => {
-    if (!localStorage.getItem('authToken')) {
-      router.push('/admin/login')
+    if (!hasValidSession()) {
+      endSession()
       return
     }
     load()
-  }, [load, router])
+  }, [load])
 
   const stats = useMemo(() => {
     const active = cards.filter((c) => c.status === 'active')
@@ -373,6 +382,18 @@ export default function AdminGiftCardsPage() {
             </button>
           ))}
         </div>
+
+        {/* Erreur de chargement : une liste vide ne doit jamais masquer une panne */}
+        {loadError && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="size-4 shrink-0" /> {loadError}
+            </span>
+            <button onClick={load} className="font-medium underline underline-offset-2">
+              Réessayer
+            </button>
+          </div>
+        )}
 
         {/* Liste */}
         <div className="mt-5 overflow-hidden rounded-xl border border-foreground/10 bg-white shadow-[var(--shadow-sm)]">
