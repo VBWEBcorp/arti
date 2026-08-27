@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, Eye, X, Megaphone, AlignCenter } from 'lucide-react'
 import Link from 'next/link'
@@ -10,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageField } from '@/components/admin/field-editor'
+import { adminFetch, endSession, hasValidSession, messageErreur } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 interface BannerSettings {
@@ -57,7 +57,6 @@ const defaultSettings: PopupSettings = {
 type Tab = 'popup' | 'banner'
 
 export default function AdminMarketingPage() {
-  const router = useRouter()
   const [settings, setSettings] = useState<PopupSettings>(defaultSettings)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -65,10 +64,8 @@ export default function AdminMarketingPage() {
   const [tab, setTab] = useState<Tab>('popup')
 
   useEffect(() => {
-    if (!localStorage.getItem('authToken')) {
-      router.push('/admin/login')
-    }
-  }, [router])
+    if (!hasValidSession()) endSession()
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,20 +93,19 @@ export default function AdminMarketingPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const token = localStorage.getItem('authToken')
-      const res = await fetch('/api/marketing', {
+      const res = await adminFetch('/api/marketing', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(settings),
       })
-      if (res.ok) {
-        alert('Paramètres sauvegardés')
+      // Un enregistrement refusé ne doit pas passer pour un succès.
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || 'Enregistrement impossible.')
       }
+      alert('Paramètres sauvegardés')
     } catch (error) {
-      alert('Erreur: ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur : ' + msg)
     } finally {
       setSaving(false)
     }

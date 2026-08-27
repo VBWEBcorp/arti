@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, ImagePlus, Loader2, Star, Trash2 } from 'lucide-react'
 
+import { adminFetch, messageErreur } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 /**
@@ -31,22 +32,20 @@ export function PhotoGalleryField({
     if (!images.length) return
     setError(null)
     setUploading((n) => n + images.length)
-    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
     const done: string[] = []
     for (const file of images) {
       try {
         const fd = new FormData()
         fd.append('file', file)
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: fd,
-        })
+        const res = await adminFetch('/api/upload', { method: 'POST', body: fd })
         const data = await res.json().catch(() => ({}))
         if (res.ok && data.url) done.push(data.url)
-        else setError(data.error || "Échec de l'upload d'une image.")
-      } catch {
-        setError('Connexion au serveur impossible pendant l’upload.')
+        else setError(data.error || "Échec de l'envoi d'une image.")
+      } catch (err) {
+        // Session expirée : messageErreur renvoie null, la redirection est déjà
+        // lancée, inutile d'afficher quoi que ce soit.
+        const msg = messageErreur(err)
+        if (msg) setError(msg)
       } finally {
         setUploading((n) => Math.max(0, n - 1))
       }

@@ -26,6 +26,7 @@ import {
   Coffee,
   Users,
 } from 'lucide-react'
+import { clearSession } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 import { useSidebar } from '@/components/admin/sidebar-context'
 
@@ -99,8 +100,7 @@ export function AdminSidebar() {
   }, [pagesSectionActive])
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('authUser')
+    clearSession()
     router.push('/admin/login')
   }
 

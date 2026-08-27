@@ -250,5 +250,100 @@ test('APRÈS : sans jeton, la page de connexion s’affiche (pas de rebond)', ()
   eq(nouveauLayout('/admin/login'), null, 'la connexion s’affiche')
 })
 
+/* ---------- volet 3 : garde-fou, le motif fautif ne doit pas revenir ---------- */
+console.log('\n\x1b[1mGarde-fou du code source\x1b[0m\n')
+
+const SESSION_MODULE = path.join('src', 'lib', 'admin-session.ts').replace(/\\/g, '/')
+
+function fichiersAdmin() {
+  const racines = [
+    path.join(ROOT, 'src', 'app', 'admin'),
+    path.join(ROOT, 'src', 'components', 'admin'),
+    path.join(ROOT, 'src', 'components', 'layout'),
+    path.join(ROOT, 'src', 'lib'),
+  ]
+  const out = []
+  const parcourir = (dir) => {
+    if (!fs.existsSync(dir)) return
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) parcourir(p)
+      else if (/\.(ts|tsx)$/.test(e.name)) out.push(p)
+    }
+  }
+  racines.forEach(parcourir)
+  return out
+}
+
+const fichiers = fichiersAdmin().map((abs) => ({
+  rel: path.relative(ROOT, abs).replace(/\\/g, '/'),
+  src: fs.readFileSync(abs, 'utf8'),
+}))
+
+// On ignore les commentaires : ils citent le motif pour l'expliquer.
+const sansCommentaires = (src) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+test(`le jeton n'est lu ou écrit que dans ${SESSION_MODULE}`, () => {
+  const coupables = fichiers
+    .filter((f) => f.rel !== SESSION_MODULE)
+    .filter((f) => /localStorage\s*\.\s*\w+\s*\(\s*['"](authToken|authUser)['"]/.test(sansCommentaires(f.src)))
+    .map((f) => f.rel)
+  eq(coupables.length, 0, `accès direct au jeton dans : ${coupables.join(', ')}`)
+})
+
+test('aucune page ne fabrique son en-tête Authorization à la main', () => {
+  const coupables = fichiers
+    .filter((f) => f.rel !== SESSION_MODULE)
+    .filter((f) => /Authorization\s*:\s*[`'"]Bearer/.test(sansCommentaires(f.src)))
+    .map((f) => f.rel)
+  eq(coupables.length, 0, `en-tête fabriqué à la main dans : ${coupables.join(', ')}`)
+})
+
+test('le layout admin contrôle la validité de la session, pas sa présence', () => {
+  const layout = fichiers.find((f) => f.rel === 'src/app/admin/layout.tsx')
+  assert(layout, 'layout admin introuvable')
+  const src = sansCommentaires(layout.src)
+  assert(src.includes('hasValidSession'), 'le layout doit appeler hasValidSession')
+  assert(src.includes('clearSession'), 'le layout doit purger la session morte')
+})
+
+// Seules pages dispensées : elles n'appellent que /api/auth/*, qui est public
+// par nature (on ne peut pas présenter un jeton pour aller le chercher).
+const PAGES_PUBLIQUES = ['src/app/admin/login/page.tsx', 'src/app/admin/register/page.tsx']
+
+test('tout appel admin qui écrit passe par adminFetch', () => {
+  const coupables = fichiers
+    .filter((f) => f.rel.startsWith('src/app/admin/') || f.rel.startsWith('src/components/admin/'))
+    .filter((f) => !PAGES_PUBLIQUES.includes(f.rel))
+    .filter((f) => {
+      const src = sansCommentaires(f.src)
+      return /method:\s*'?"?(POST|PUT|DELETE|PATCH)/.test(src) && !src.includes('adminFetch')
+    })
+    .map((f) => f.rel)
+  eq(coupables.length, 0, `écriture sans adminFetch dans : ${coupables.join(', ')}`)
+})
+
+test('les pages dispensées n’appellent bien que /api/auth', () => {
+  for (const rel of PAGES_PUBLIQUES) {
+    const f = fichiers.find((x) => x.rel === rel)
+    if (!f) continue
+    const cibles = [...sansCommentaires(f.src).matchAll(/fetch\(\s*['"`](\/api\/[^'"`]+)/g)].map((m) => m[1])
+    const hors = cibles.filter((u) => !u.startsWith('/api/auth/'))
+    eq(hors.length, 0, `${rel} appelle hors /api/auth : ${hors.join(', ')}`)
+  }
+})
+
+test('la durée du jeton et la marge du navigateur restent cohérentes', () => {
+  const auth = fs.readFileSync(path.join(SRC, 'lib', 'auth.ts'), 'utf8')
+  const m = auth.match(/TOKEN_TTL\s*=\s*'(\d+)d'/)
+  assert(m, 'TOKEN_TTL introuvable dans src/lib/auth.ts')
+  const jours = Number(m[1])
+  assert(jours >= 1 && jours <= 90, `durée de jeton déraisonnable : ${jours} j`)
+  // Le test « jeton frais » plus haut pose 30 j : si la durée change, il faut
+  // le savoir ici plutôt que de le découvrir en production.
+  eq(jours, 30, 'durée du jeton')
+})
+
 console.log(`\n\x1b[1mRésultat : ${passed} réussi(s), ${failed} échec(s)\x1b[0m\n`)
 process.exit(failed ? 1 : 0)

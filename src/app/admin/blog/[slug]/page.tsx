@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageField } from '@/components/admin/field-editor'
 import { RichEditor } from '@/components/admin/rich-editor'
+import { adminFetch, endSession, hasValidSession, messageErreur } from '@/lib/admin-session'
 
 interface BlogPost {
   _id?: string
@@ -53,8 +54,9 @@ export default function BlogPostEditor({ params }: { params: Promise<{ slug: str
   const [categories, setCategories] = useState<string[]>([])
 
   useEffect(() => {
-    if (!localStorage.getItem('authToken')) {
-      router.push('/admin/login')
+    if (!hasValidSession()) {
+      endSession()
+      return
     }
     // Fetch categories from settings
     fetch('/api/blog/settings')
@@ -103,7 +105,6 @@ export default function BlogPostEditor({ params }: { params: Promise<{ slug: str
 
     setSaving(true)
     try {
-      const token = localStorage.getItem('authToken')
       const slug = post.slug || generateSlug(post.title)
       const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean)
       const body = { ...post, slug, tags }
@@ -111,28 +112,21 @@ export default function BlogPostEditor({ params }: { params: Promise<{ slug: str
       const url = isNew ? '/api/blog/posts' : `/api/blog/posts/${slug}`
       const method = isNew ? 'POST' : 'PUT'
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      })
+      const response = await adminFetch(url, { method, body: JSON.stringify(body) })
 
-      if (response.ok) {
-        const saved = await response.json()
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'Enregistrement impossible.')
 
-        if (isNew) {
-          router.push(`/admin/blog/${saved.slug}`)
-        } else {
-          setPost(saved)
-        }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      if (isNew) {
+        router.push(`/admin/blog/${data.slug}`)
       } else {
-        const err = await response.json()
-        alert(err.error || 'Erreur')
+        setPost(data)
       }
-    } catch {
-      alert('Erreur lors de la sauvegarde')
+    } catch (error) {
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur lors de la sauvegarde : ' + msg)
     } finally {
       setSaving(false)
     }
@@ -141,14 +135,15 @@ export default function BlogPostEditor({ params }: { params: Promise<{ slug: str
   const handleDelete = async () => {
     if (!confirm('Supprimer définitivement cet article ?')) return
     try {
-      const token = localStorage.getItem('authToken')
-      await fetch(`/api/blog/posts/${post.slug}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const response = await adminFetch(`/api/blog/posts/${post.slug}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Suppression impossible.')
+      }
       router.push('/admin/blog')
-    } catch {
-      alert('Erreur')
+    } catch (error) {
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur lors de la suppression : ' + msg)
     }
   }
 

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 
 import { GiftCardVisual } from '@/components/arti/gift-card-visual'
-import { authHeaders, endSession, hasValidSession } from '@/lib/admin-session'
+import { adminFetch, endSession, hasValidSession, messageErreur } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 const eur = (n: number) =>
@@ -122,15 +122,11 @@ export default function AdminGiftCardsPage() {
       const params = new URLSearchParams({ limit: '1000' })
       if (search.trim()) params.set('search', search.trim())
       if (statusFilter) params.set('status', statusFilter)
-      const res = await fetch(`/api/gift-cards?${params}`, { headers: authHeaders() })
-      // Session morte : on la purge avant de renvoyer vers la connexion. Sans
-      // cette purge, le jeton expiré restait en place et /admin/login
+      // adminFetch purge la session et renvoie vers la connexion sur un 401.
+      // Sans cette purge, le jeton expiré restait en place et /admin/login
       // rebasculait aussitôt sur le tableau de bord — la liste n'apparaissait
       // jamais.
-      if (res.status === 401) {
-        endSession()
-        return
-      }
+      const res = await adminFetch(`/api/gift-cards?${params}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Chargement impossible.')
       setCards(data.giftCards || [])
@@ -139,11 +135,7 @@ export default function AdminGiftCardsPage() {
       console.error(err)
       // Une erreur serveur ne doit plus se traduire par une liste vide et
       // silencieuse : on le dit.
-      setLoadError(
-        err instanceof TypeError
-          ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
-          : (err as Error).message
-      )
+      setLoadError(messageErreur(err))
     } finally {
       setLoading(false)
     }
@@ -237,14 +229,11 @@ export default function AdminGiftCardsPage() {
     try {
       // Suppression = DELETE /api/gift-cards/:id ; annuler/réactiver = PATCH .../:action.
       const isDelete = confirmState.action === 'delete'
-      const res = await fetch(
+      const res = await adminFetch(
         isDelete
           ? `/api/gift-cards/${confirmState.id}`
           : `/api/gift-cards/${confirmState.id}/${confirmState.action}`,
-        {
-          method: isDelete ? 'DELETE' : 'PATCH',
-          headers: authHeaders(),
-        }
+        { method: isDelete ? 'DELETE' : 'PATCH' }
       )
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Une erreur est survenue.')
@@ -252,11 +241,7 @@ export default function AdminGiftCardsPage() {
       setDetail(null)
       load()
     } catch (err) {
-      setConfirmError(
-        err instanceof TypeError
-          ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
-          : (err as Error).message
-      )
+      setConfirmError(messageErreur(err))
     } finally {
       setConfirmLoading(false)
     }
@@ -683,14 +668,12 @@ function ExpiredStatsPanel() {
       const p = new URLSearchParams()
       if (from) p.set('from', from)
       if (to) p.set('to', to)
-      const res = await fetch(`/api/gift-cards/expired-stats?${p.toString()}`, {
-        headers: authHeaders(),
-      })
+      const res = await adminFetch(`/api/gift-cards/expired-stats?${p.toString()}`)
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Erreur')
       setStats(d)
     } catch (err) {
-      setError(err instanceof TypeError ? 'Connexion impossible.' : (err as Error).message)
+      setError(messageErreur(err))
     } finally {
       setLoading(false)
     }
@@ -829,9 +812,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch('/api/gift-cards', {
+      const res = await adminFetch('/api/gift-cards', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({
           initialAmount: Number(amount),
           source: source === 'admin' ? undefined : source,
@@ -980,9 +962,8 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
     setLookup(null)
     setResult(null)
     try {
-      const res = await fetch('/api/gift-cards/check-balance', {
+      const res = await adminFetch('/api/gift-cards/check-balance', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({ code: code.trim() }),
       })
       const data = await res.json().catch(() => ({}))
@@ -1003,9 +984,8 @@ function RedeemModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch('/api/gift-cards/redeem', {
+      const res = await adminFetch('/api/gift-cards/redeem', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({
           code: code.trim(),
           amount: Number(amount),
@@ -1203,9 +1183,8 @@ function DetailModal({
     // le blocage des pop-ups, puis on y charge le blob une fois prêt.
     const win = mode === 'preview' ? window.open('', '_blank') : null
     try {
-      const res = await fetch(
-        `/api/gift-cards/${card._id}/pdf${mode === 'download' ? '?download=1' : ''}`,
-        { headers: authHeaders() }
+      const res = await adminFetch(
+        `/api/gift-cards/${card._id}/pdf${mode === 'download' ? '?download=1' : ''}`
       )
       if (!res.ok) throw new Error('Génération du PDF impossible.')
       const url = URL.createObjectURL(await res.blob())

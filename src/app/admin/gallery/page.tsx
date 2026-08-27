@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import { Trash2, Plus, Check, X, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -11,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImageField } from '@/components/admin/field-editor'
+import { adminFetch, endSession, hasValidSession, messageErreur } from '@/lib/admin-session'
 
 interface GalleryImage {
   _id: string
@@ -30,7 +30,6 @@ interface GallerySettings {
 }
 
 export default function AdminGalleryPage() {
-  const router = useRouter()
   const [settings, setSettings] = useState<GallerySettings>({ enabled: false, title: 'Nos réalisations', eyebrow: 'Galerie', description: 'Découvrez nos projets récents et laissez-vous inspirer par notre savoir-faire.', heroImage: '' })
   const [images, setImages] = useState<GalleryImage[]>([])
   const [newImage, setNewImage] = useState({ title: '', description: '', imageUrl: '', category: '' })
@@ -38,12 +37,10 @@ export default function AdminGalleryPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // Vérifier auth
+  // Vérifier la session : validité réelle, pas simple présence du jeton.
   useEffect(() => {
-    if (!localStorage.getItem('authToken')) {
-      router.push('/admin/login')
-    }
-  }, [router])
+    if (!hasValidSession()) endSession()
+  }, [])
 
   // Charger les données
   useEffect(() => {
@@ -75,21 +72,18 @@ export default function AdminGalleryPage() {
   const handleSaveSettings = async () => {
     setSaving(true)
     try {
-      const token = localStorage.getItem('authToken')
-      const response = await fetch('/api/gallery/settings', {
+      const response = await adminFetch('/api/gallery/settings', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(settings),
       })
-
-      if (response.ok) {
-        alert('✅ Paramètres sauvegardés')
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Enregistrement impossible.')
       }
+      alert('✅ Paramètres sauvegardés')
     } catch (error) {
-      alert('❌ Erreur: ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
+      const msg = messageErreur(error)
+      if (msg) alert('❌ Erreur : ' + msg)
     } finally {
       setSaving(false)
     }
@@ -103,24 +97,19 @@ export default function AdminGalleryPage() {
 
     setSaving(true)
     try {
-      const token = localStorage.getItem('authToken')
-      const response = await fetch('/api/gallery/images', {
+      const response = await adminFetch('/api/gallery/images', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(newImage),
       })
+      const image = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(image.error || 'Ajout impossible.')
 
-      if (response.ok) {
-        const image = await response.json()
-        setImages([...images, image])
-        setNewImage({ title: '', description: '', imageUrl: '', category: '' })
-        alert('✅ Image ajoutée')
-      }
+      setImages([...images, image])
+      setNewImage({ title: '', description: '', imageUrl: '', category: '' })
+      alert('✅ Image ajoutée')
     } catch (error) {
-      alert('❌ Erreur: ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
+      const msg = messageErreur(error)
+      if (msg) alert('❌ Erreur : ' + msg)
     } finally {
       setSaving(false)
     }
@@ -130,43 +119,38 @@ export default function AdminGalleryPage() {
     if (!confirm('Êtes-vous sûr?')) return
 
     try {
-      const token = localStorage.getItem('authToken')
-      const response = await fetch(`/api/gallery/images/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        setImages(images.filter(img => img._id !== id))
-        alert('✅ Image supprimée')
+      const response = await adminFetch(`/api/gallery/images/${id}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Suppression impossible.')
       }
+      setImages(images.filter(img => img._id !== id))
+      alert('✅ Image supprimée')
     } catch (error) {
-      alert('❌ Erreur: ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
+      const msg = messageErreur(error)
+      if (msg) alert('❌ Erreur : ' + msg)
     }
   }
 
   const handleToggleImage = async (id: string, active: boolean) => {
     try {
-      const token = localStorage.getItem('authToken')
       const image = images.find(img => img._id === id)
       if (!image) return
 
-      const response = await fetch(`/api/gallery/images/${id}`, {
+      const response = await adminFetch(`/api/gallery/images/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify({ ...image, active: !active }),
       })
-
-      if (response.ok) {
-        setImages(images.map(img =>
-          img._id === id ? { ...img, active: !active } : img
-        ))
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Modification impossible.')
       }
+      setImages(images.map(img =>
+        img._id === id ? { ...img, active: !active } : img
+      ))
     } catch (error) {
-      alert('❌ Erreur')
+      const msg = messageErreur(error)
+      if (msg) alert('❌ Erreur : ' + msg)
     }
   }
 
@@ -198,12 +182,22 @@ export default function AdminGalleryPage() {
               onClick={() => {
                 const newSettings = { ...settings, enabled: !settings.enabled }
                 setSettings(newSettings)
-                const token = localStorage.getItem('authToken')
-                fetch('/api/gallery/settings', {
+                // Bascule immédiate : on prévient si elle n'a pas été enregistrée,
+                // sinon l'interrupteur ment sur l'état réel du site.
+                adminFetch('/api/gallery/settings', {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                   body: JSON.stringify(newSettings),
                 })
+                  .then((r) => {
+                    if (!r.ok) throw new Error('Enregistrement impossible.')
+                  })
+                  .catch((err) => {
+                    const msg = messageErreur(err)
+                    if (msg) {
+                      setSettings(settings)
+                      alert('❌ Erreur : ' + msg)
+                    }
+                  })
               }}
             >
               <div className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${settings.enabled ? 'translate-x-4' : ''}`} />

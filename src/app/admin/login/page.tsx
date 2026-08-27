@@ -7,6 +7,8 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Lock, Mail } from 'lucide-react'
 
+import { startSession } from '@/lib/admin-session'
+
 const ease = [0.22, 1, 0.36, 1] as const
 
 const inputCls =
@@ -45,8 +47,7 @@ export default function AdminLoginPage() {
       }
 
       const data = await response.json()
-      localStorage.setItem('authToken', data.token)
-      localStorage.setItem('authUser', JSON.stringify(data.user))
+      startSession(data.token, data.user)
 
       router.replace('/admin/dashboard')
     } catch (err) {

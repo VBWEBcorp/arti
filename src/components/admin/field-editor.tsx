@@ -5,6 +5,7 @@ import { Upload, Link as LinkIcon, X, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { adminFetch, messageErreur } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 interface FieldEditorProps {
@@ -77,27 +78,21 @@ export function ImageField({ label, value, onChange }: ImageFieldProps) {
   const handleUpload = async (file: File) => {
     setUploading(true)
     try {
-      const token = localStorage.getItem('authToken')
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
+      // adminFetch laisse le navigateur poser le Content-Type multipart, et
+      // traite lui-même la session expirée.
+      const response = await adminFetch('/api/upload', { method: 'POST', body: formData })
 
-      if (!response.ok) {
-        const data = await response.json()
-        alert(data.error || 'Erreur upload')
-        return
-      }
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'Envoi du fichier impossible.')
 
-      const data = await response.json()
       onChange(data.url)
       setUploadInfo(`${data.originalSize} → ${data.optimizedSize} (${data.storage})`)
     } catch (error) {
-      alert('Erreur lors de l\'upload')
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur lors de l\'envoi : ' + msg)
     } finally {
       setUploading(false)
     }

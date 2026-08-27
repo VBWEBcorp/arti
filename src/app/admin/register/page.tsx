@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { startSession } from '@/lib/admin-session'
 
 export default function AdminRegisterPage() {
   const [formData, setFormData] = useState({
@@ -61,8 +62,7 @@ export default function AdminRegisterPage() {
       }
 
       const data = await response.json()
-      localStorage.setItem('authToken', data.token)
-      localStorage.setItem('authUser', JSON.stringify(data.user))
+      startSession(data.token, data.user)
 
       router.push('/admin/dashboard')
     } catch (err) {

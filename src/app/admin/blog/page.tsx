@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   Plus, Trash2, Check, ArrowLeft, Pencil, Eye, EyeOff,
@@ -14,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImageField } from '@/components/admin/field-editor'
+import { adminFetch, endSession, hasValidSession, messageErreur } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 interface BlogPost {
@@ -40,38 +40,40 @@ interface BlogSettings {
 type Tab = 'articles' | 'settings'
 
 export default function AdminBlogPage() {
-  const router = useRouter()
   const [tab, setTab] = useState<Tab>('articles')
   const [settings, setSettings] = useState<BlogSettings>({ enabled: false, title: 'Nos dernières actualités', eyebrow: 'Blog', description: 'Retrouvez nos conseils, nos projets récents et les tendances du secteur.', heroImage: '', categories: [] })
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [newCategory, setNewCategory] = useState('')
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all')
 
   useEffect(() => {
-    if (!localStorage.getItem('authToken')) {
-      router.push('/admin/login')
-    }
-  }, [router])
+    if (!hasValidSession()) endSession()
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('authToken')
         const [settingsRes, postsRes] = await Promise.all([
           fetch('/api/blog/settings'),
-          fetch('/api/blog/posts', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          adminFetch('/api/blog/posts'),
         ])
         const settingsData = await settingsRes.json()
         setSettings({ ...settingsData, categories: settingsData.categories || [] })
-        setPosts(await postsRes.json())
+
+        const postsData = await postsRes.json()
+        if (!postsRes.ok) throw new Error(postsData?.error || 'Chargement des articles impossible.')
+        // Garde-fou : une réponse d'erreur n'est pas un tableau, et une liste
+        // vide silencieuse est précisément ce qu'on veut éviter.
+        setPosts(Array.isArray(postsData) ? postsData : [])
+        setLoadError(null)
       } catch (error) {
-        console.error('Failed to load blog:', error)
+        console.error(error)
+        setLoadError(messageErreur(error))
       } finally {
         setLoading(false)
       }
@@ -82,18 +84,19 @@ export default function AdminBlogPage() {
   const handleSaveSettings = async () => {
     setSaving(true)
     try {
-      const token = localStorage.getItem('authToken')
-      const response = await fetch('/api/blog/settings', {
+      const response = await adminFetch('/api/blog/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(settings),
       })
-      if (response.ok) {
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Enregistrement impossible.')
       }
-    } catch {
-      alert('Erreur lors de la sauvegarde')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (error) {
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur lors de la sauvegarde : ' + msg)
     } finally {
       setSaving(false)
     }
@@ -116,30 +119,32 @@ export default function AdminBlogPage() {
   const handleDelete = async (slug: string) => {
     if (!confirm('Supprimer cet article ?')) return
     try {
-      const token = localStorage.getItem('authToken')
-      const response = await fetch(`/api/blog/posts/${slug}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) setPosts(posts.filter((p) => p.slug !== slug))
-    } catch {
-      alert('Erreur lors de la suppression')
+      const response = await adminFetch(`/api/blog/posts/${slug}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Suppression impossible.')
+      }
+      setPosts(posts.filter((p) => p.slug !== slug))
+    } catch (error) {
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur lors de la suppression : ' + msg)
     }
   }
 
   const handleTogglePublish = async (post: BlogPost) => {
     try {
-      const token = localStorage.getItem('authToken')
-      const response = await fetch(`/api/blog/posts/${post.slug}`, {
+      const response = await adminFetch(`/api/blog/posts/${post.slug}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...post, published: !post.published }),
       })
-      if (response.ok) {
-        setPosts(posts.map((p) => p.slug === post.slug ? { ...p, published: !p.published } : p))
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Modification impossible.')
       }
-    } catch {
-      alert('Erreur')
+      setPosts(posts.map((p) => p.slug === post.slug ? { ...p, published: !p.published } : p))
+    } catch (error) {
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur : ' + msg)
     }
   }
 
@@ -161,6 +166,13 @@ export default function AdminBlogPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Une liste vide ne doit jamais masquer une panne de chargement. */}
+      {loadError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 pt-8 md:pt-0">
         <div className="flex items-center gap-3">
@@ -182,13 +194,22 @@ export default function AdminBlogPage() {
               onClick={() => {
                 const newSettings = { ...settings, enabled: !settings.enabled }
                 setSettings(newSettings)
-                // Auto-save toggle
-                const token = localStorage.getItem('authToken')
-                fetch('/api/blog/settings', {
+                // Enregistrement immédiat : on revient en arrière et on prévient
+                // si le serveur refuse, sinon l'interrupteur ment.
+                adminFetch('/api/blog/settings', {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                   body: JSON.stringify(newSettings),
                 })
+                  .then((r) => {
+                    if (!r.ok) throw new Error('Enregistrement impossible.')
+                  })
+                  .catch((err) => {
+                    const msg = messageErreur(err)
+                    if (msg) {
+                      setSettings(settings)
+                      alert('Erreur : ' + msg)
+                    }
+                  })
               }}
             >
               <div

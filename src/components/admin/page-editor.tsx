@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Save, Check, ArrowLeft, Eye, X, ExternalLink, Monitor, Smartphone } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { adminFetch, messageErreur } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 interface PageEditorProps {
@@ -116,22 +117,22 @@ export function PageEditor({ pageId, title, defaultContent, children }: PageEdit
   const handleSave = async () => {
     setSaving(true)
     try {
-      const token = localStorage.getItem('authToken')
-      const response = await fetch(`/api/content/${pageId}`, {
+      const response = await adminFetch(`/api/content/${pageId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ content }),
       })
 
-      if (response.ok) {
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+      // Un refus serveur ne doit pas passer inaperçu : sans cela, le client
+      // croyait avoir enregistré alors que rien n'était parti.
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || 'Enregistrement impossible.')
       }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
     } catch (error) {
-      alert('Erreur lors de la sauvegarde')
+      const msg = messageErreur(error)
+      if (msg) alert('Erreur lors de la sauvegarde : ' + msg)
     } finally {
       setSaving(false)
     }

@@ -18,7 +18,7 @@ import {
   Wallet,
 } from 'lucide-react'
 
-import { authHeaders, endSession, getUser, hasValidSession } from '@/lib/admin-session'
+import { adminFetch, endSession, getUser, hasValidSession, messageErreur } from '@/lib/admin-session'
 import { cn } from '@/lib/utils'
 
 const modules = [
@@ -78,21 +78,14 @@ export default function AdminDashboardPage() {
     try {
       // Limite large : le récapitulatif porte sur l'ensemble des cartes, pas
       // sur une page de résultats.
-      const res = await fetch('/api/gift-cards?limit=1000', { headers: authHeaders() })
-      if (res.status === 401) {
-        endSession()
-        return
-      }
+      // adminFetch traite lui-même la session expirée (purge + reconnexion).
+      const res = await adminFetch('/api/gift-cards?limit=1000')
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Chargement impossible.')
       setCards(data.giftCards || [])
       setError(null)
     } catch (err) {
-      setError(
-        err instanceof TypeError
-          ? 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
-          : (err as Error).message
-      )
+      setError(messageErreur(err))
     } finally {
       setLoading(false)
     }

@@ -72,6 +72,13 @@ export function getUser(): AdminUser | null {
   }
 }
 
+/** Ouvre la session après une connexion réussie. */
+export function startSession(token: string, user: AdminUser): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+}
+
 /** Efface le jeton et le profil : la session est terminée. */
 export function clearSession(): void {
   if (typeof window === 'undefined') return
@@ -92,6 +99,58 @@ export function hasValidSession(): boolean {
 /** En-têtes des appels admin authentifiés. */
 export function authHeaders(extra?: HeadersInit): HeadersInit {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}`, ...extra }
+}
+
+/** Levée par adminFetch quand la session est morte : l'appelant n'a rien à afficher. */
+export class SessionExpiredError extends Error {
+  constructor() {
+    super('Session expirée')
+    this.name = 'SessionExpiredError'
+  }
+}
+
+/**
+ * SEUL point de passage des appels admin authentifiés.
+ *
+ * Pose le jeton et, surtout, traite le 401 une bonne fois : session purgée et
+ * retour à la connexion. Passer par ici est ce qui garantit qu'aucune page de
+ * l'espace ne peut plus échouer en silence quand le jeton meurt — le symptôme
+ * d'origine (« je suis connectée et je ne vois rien ») venait précisément de
+ * pages qui ignoraient ce 401.
+ *
+ * Le Content-Type JSON n'est posé que s'il a un sens : un envoi de fichier
+ * (FormData) doit garder celui que le navigateur calcule, avec sa frontière
+ * multipart.
+ */
+export async function adminFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const estFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${getToken()}`,
+    ...((init.headers as Record<string, string>) || {}),
+  }
+  if (!estFormData && !headers['Content-Type'] && init.body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  const res = await fetch(input, { ...init, headers })
+
+  if (res.status === 401) {
+    endSession()
+    throw new SessionExpiredError()
+  }
+  return res
+}
+
+/**
+ * Message lisible pour l'utilisateur à partir d'une erreur d'appel admin.
+ * `null` = session expirée, la redirection est déjà lancée : ne rien afficher.
+ */
+export function messageErreur(err: unknown): string | null {
+  if (err instanceof SessionExpiredError) return null
+  if (err instanceof TypeError) {
+    return 'Connexion au serveur impossible. Vérifiez votre connexion et réessayez.'
+  }
+  return err instanceof Error && err.message ? err.message : 'Une erreur est survenue.'
 }
 
 /**
