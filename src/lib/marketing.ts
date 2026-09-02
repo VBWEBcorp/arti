@@ -110,6 +110,72 @@ export const BANNER_THEMES: MarketingTheme[] = [
 ]
 
 /* ------------------------------------------------------------------ */
+/* Largeur de la carte                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Largeur maximale de la popup sur le site.
+ *
+ * Avec une image, la carte s'étale en rectangle sur grand écran (image à
+ * gauche, texte à droite) ; sans image, un rectangle plus étroit suffit et se
+ * lit mieux. En dessous de `lg`, on reste sur une carte verticale.
+ *
+ * La bascule une colonne / deux colonnes, elle, ne dépend PAS de la taille de
+ * l'écran mais de la largeur réellement donnée à la carte (`@container` dans
+ * popup-card). C'est ce qui permet à l'aperçu de l'admin d'être exact : une
+ * carte posée dans un cadre de 358 px s'affiche en mode téléphone, même sur un
+ * écran d'ordinateur.
+ */
+export function classesLargeurPopup(s: MarketingSettings): string {
+  return s.imageUrl ? 'max-w-[440px] lg:max-w-[880px]' : 'max-w-[440px] lg:max-w-[560px]'
+}
+
+/* ------------------------------------------------------------------ */
+/* Aperçu de l'espace admin : les trois appareils                      */
+/* ------------------------------------------------------------------ */
+
+export type Appareil = 'ordinateur' | 'tablette' | 'telephone'
+
+/** Largeur d'écran simulée par chaque aperçu, en pixels. */
+export const LARGEURS_ECRAN: Record<Appareil, number> = {
+  ordinateur: 1180,
+  tablette: 768,
+  telephone: 390,
+}
+
+export const LIBELLES_APPAREIL: Record<Appareil, string> = {
+  ordinateur: 'Ordinateur',
+  tablette: 'Tablette',
+  telephone: 'Téléphone',
+}
+
+/**
+ * Largeur que prendrait la carte sur un écran de cette largeur.
+ *
+ * Reproduit exactement `classesLargeurPopup` (dont le point de bascule `lg`
+ * vaut 1024 px) plus la marge de 16 px de chaque côté. C'est ce calcul qui
+ * rend l'aperçu fidèle : la carte n'est pas « réduite pour tenir », elle est
+ * posée dans la largeur qu'elle aurait vraiment.
+ */
+export function largeurCarteDansEcran(s: MarketingSettings, largeurEcran: number): number {
+  const maximum = largeurEcran >= 1024 ? (s.imageUrl ? 880 : 560) : 440
+  return Math.min(maximum, largeurEcran - 32)
+}
+
+/**
+ * L'appareil à montrer d'emblée : celui sur lequel la gérante se trouve.
+ *
+ * Elle édite presque toujours depuis un ordinateur alors que ses visiteurs
+ * sont surtout sur téléphone : les trois onglets restent donc accessibles,
+ * mais on ouvre sur ce qu'elle a sous les yeux.
+ */
+export function appareilParDefaut(largeurFenetre: number): Appareil {
+  if (largeurFenetre >= 1024) return 'ordinateur'
+  if (largeurFenetre >= 640) return 'tablette'
+  return 'telephone'
+}
+
+/* ------------------------------------------------------------------ */
 /* Couleurs : lisibilité                                               */
 /* ------------------------------------------------------------------ */
 

@@ -202,6 +202,83 @@ test('le bandeau suit les mêmes dates et exige un texte', () => {
   assert(!M.isBannerLive(sansTexte), 'un bandeau vide ne s’affiche pas')
 })
 
+console.log('\n\x1b[1mMise en page : ordinateur, tablette, téléphone\x1b[0m\n')
+
+const avecImage = M.normalizeMarketing({ imageUrl: 'https://exemple.test/affiche.webp' })
+const sansImage = M.normalizeMarketing({})
+
+test('sur ordinateur, la carte avec image devient un rectangle', () => {
+  const l = M.largeurCarteDansEcran(avecImage, M.LARGEURS_ECRAN.ordinateur)
+  eq(l, 880, 'largeur sur ordinateur')
+  // 42rem = 672 px est le seuil des deux colonnes (@2xl dans popup-card).
+  assert(l >= 672, 'une carte de 880 px doit passer en deux colonnes')
+})
+
+test('sans image, la carte reste plus étroite et sur une colonne', () => {
+  const l = M.largeurCarteDansEcran(sansImage, M.LARGEURS_ECRAN.ordinateur)
+  eq(l, 560, 'largeur sans image')
+  assert(l < 672, 'pas de deux colonnes sans image à mettre à gauche')
+})
+
+test('sur tablette et téléphone, la carte reste sur une colonne', () => {
+  const tablette = M.largeurCarteDansEcran(avecImage, M.LARGEURS_ECRAN.tablette)
+  const telephone = M.largeurCarteDansEcran(avecImage, M.LARGEURS_ECRAN.telephone)
+  eq(tablette, 440, 'tablette')
+  eq(telephone, 358, 'téléphone (390 moins les marges)')
+  assert(tablette < 672 && telephone < 672, 'jamais deux colonnes sur ces largeurs')
+})
+
+test('la carte ne déborde jamais de l’écran', () => {
+  for (const largeur of [320, 360, 390, 414, 768, 1024, 1180, 1600]) {
+    const l = M.largeurCarteDansEcran(avecImage, largeur)
+    assert(l <= largeur - 32, `déborde sur un écran de ${largeur} px : ${l}`)
+  }
+})
+
+test('les largeurs du site et celles de l’aperçu ne peuvent pas diverger', () => {
+  // classesLargeurPopup gouverne le site, largeurCarteDansEcran gouverne
+  // l'aperçu : les deux doivent annoncer les mêmes nombres.
+  const classes = M.classesLargeurPopup(avecImage)
+  const grand = classes.match(/lg:max-w-\[(\d+)px\]/)
+  const petit = classes.match(/max-w-\[(\d+)px\]/)
+  assert(grand && petit, `classes illisibles : ${classes}`)
+  eq(Number(grand[1]), M.largeurCarteDansEcran(avecImage, 1180), 'largeur grand écran')
+  eq(Number(petit[1]), 440, 'largeur sous le seuil lg')
+  eq(M.largeurCarteDansEcran(avecImage, 768), 440, 'la tablette suit la même règle')
+})
+
+test('l’aperçu s’ouvre sur l’appareil réellement utilisé', () => {
+  eq(M.appareilParDefaut(1440), 'ordinateur', 'grand écran')
+  eq(M.appareilParDefaut(1024), 'ordinateur', 'seuil ordinateur')
+  eq(M.appareilParDefaut(820), 'tablette', 'tablette')
+  eq(M.appareilParDefaut(390), 'telephone', 'téléphone')
+})
+
+test('la carte se scinde sur une requête de conteneur, pas sur la taille d’écran', () => {
+  const carte = sansCommentaires(lire('src/components/marketing/popup-card.tsx'))
+  assert(carte.includes('@container'), 'la carte doit être un conteneur')
+  assert(/@2xl:grid\b/.test(carte), 'passage en deux colonnes attendu au seuil @2xl')
+  assert(
+    !/\b(sm|md|lg|xl):(grid|flex-row)\b/.test(carte),
+    'aucune bascule de mise en page sur une largeur d’écran : l’aperçu mentirait'
+  )
+})
+
+test('le texte long défile dans la carte, sans emporter la croix de fermeture', () => {
+  const carte = sansCommentaires(lire('src/components/marketing/popup-card.tsx'))
+  assert(carte.includes('overflow-y-auto'), 'le contenu doit pouvoir défiler')
+  const posBouton = carte.indexOf('aria-label="Fermer"')
+  const posContenu = carte.indexOf('overflow-y-auto')
+  assert(posBouton !== -1 && posBouton < posContenu, 'la croix doit être hors du bloc qui défile')
+})
+
+test('l’espace admin propose les trois aperçus', () => {
+  const admin = sansCommentaires(lire('src/app/admin/marketing/page.tsx'))
+  assert(admin.includes('LARGEURS_ECRAN'), 'les trois largeurs doivent venir de src/lib/marketing')
+  assert(admin.includes('appareilParDefaut'), "l'aperçu doit s'ouvrir sur l'appareil utilisé")
+  assert(admin.includes('largeurCarteDansEcran'), 'la carte doit être posée à sa largeur réelle')
+})
+
 console.log('\n\x1b[1mLisibilité et liens\x1b[0m\n')
 
 test('le texte du bouton reste lisible quelle que soit sa couleur', () => {

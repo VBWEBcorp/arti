@@ -1,8 +1,17 @@
 'use client'
 
-import { AlignCenter, ArrowLeft, Check, ExternalLink, Megaphone } from 'lucide-react'
+import {
+  AlignCenter,
+  ArrowLeft,
+  Check,
+  ExternalLink,
+  Megaphone,
+  Monitor,
+  Smartphone,
+  Tablet,
+} from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ImageField } from '@/components/admin/field-editor'
 import { MarketingBannerBar } from '@/components/marketing/banner-bar'
@@ -12,14 +21,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { adminFetch, endSession, hasValidSession, messageErreur } from '@/lib/admin-session'
 import {
+  type Appareil,
   BANNER_THEMES,
   DEFAULT_MARKETING,
+  LARGEURS_ECRAN,
+  LIBELLES_APPAREIL,
   type MarketingSettings,
   POPUP_THEMES,
   type PopupFrequency,
   type PopupLayout,
+  appareilParDefaut,
   isBannerLive,
   isPopupLive,
+  largeurCarteDansEcran,
   normalizeMarketing,
   raisonNonAffichage,
 } from '@/lib/marketing'
@@ -49,6 +63,22 @@ const MISES_EN_PAGE: { id: PopupLayout; label: string; aide: string }[] = [
   { id: 'coin', label: 'En bas à droite', aide: 'Discret, le visiteur continue sa lecture.' },
 ]
 
+/** Hauteur d'écran simulée par chaque aperçu, en pixels. */
+const HAUTEURS_ECRAN: Record<Appareil, number> = {
+  ordinateur: 720,
+  tablette: 940,
+  telephone: 780,
+}
+
+const ICONES_APPAREIL: Record<Appareil, typeof Monitor> = {
+  ordinateur: Monitor,
+  tablette: Tablet,
+  telephone: Smartphone,
+}
+
+/** Au-delà, le message tient rarement sur un écran de téléphone sans défiler. */
+const TEXTE_LONG = 320
+
 export default function AdminMarketingPage() {
   const [settings, setSettings] = useState<MarketingSettings>(DEFAULT_MARKETING)
   const [enregistre, setEnregistre] = useState<string>('')
@@ -56,9 +86,16 @@ export default function AdminMarketingPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'erreur'; texte: string } | null>(null)
   const [tab, setTab] = useState<Tab>('popup')
+  const [appareil, setAppareil] = useState<Appareil>('ordinateur')
 
   useEffect(() => {
     if (!hasValidSession()) endSession()
+  }, [])
+
+  // On ouvre sur l'appareil qu'elle a sous les yeux ; les deux autres restent
+  // à un clic, parce que c'est justement sur téléphone qu'un texte long casse.
+  useEffect(() => {
+    setAppareil(appareilParDefaut(window.innerWidth))
   }, [])
 
   useEffect(() => {
@@ -121,6 +158,7 @@ export default function AdminMarketingPage() {
   const empeche = raisonNonAffichage(settings)
   const popupEnLigne = isPopupLive(settings)
   const banniereEnLigne = isBannerLive(settings)
+  const tropLong = settings.description.length > TEXTE_LONG
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -231,7 +269,7 @@ export default function AdminMarketingPage() {
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_560px]">
         {/* ---------------------------------------------------------- */}
         {/* Colonne formulaire                                          */}
         {/* ---------------------------------------------------------- */}
@@ -530,53 +568,94 @@ export default function AdminMarketingPage() {
         {/* ---------------------------------------------------------- */}
         <div className="order-1 lg:order-2">
           <div className="lg:sticky lg:top-6">
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Aperçu en direct
               </p>
-              <p className="text-[10px] text-muted-foreground/60">Ce que voit le visiteur</p>
+              {/* Les trois appareils, toujours accessibles : un texte long peut
+                  très bien passer sur ordinateur et déborder sur téléphone. */}
+              <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5">
+                {(Object.keys(LARGEURS_ECRAN) as Appareil[]).map((a) => {
+                  const Icone = ICONES_APPAREIL[a]
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => setAppareil(a)}
+                      aria-pressed={appareil === a}
+                      title={LIBELLES_APPAREIL[a]}
+                      className={cn(
+                        'flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium transition-colors',
+                        appareil === a
+                          ? 'bg-white text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Icone className="size-3.5" />
+                      <span className="hidden sm:inline">{LIBELLES_APPAREIL[a]}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-border/60 bg-beige shadow-sm">
-              {/* Bandeau, à sa vraie place : au-dessus du menu */}
-              {settings.banner.enabled && (
-                <MarketingBannerBar settings={settings} preview />
-              )}
+            <Ecran largeur={LARGEURS_ECRAN[appareil]} hauteur={HAUTEURS_ECRAN[appareil]}>
+              <div className="flex h-full flex-col bg-beige">
+                {/* Bandeau, à sa vraie place : au-dessus du menu */}
+                {settings.banner.enabled && <MarketingBannerBar settings={settings} preview />}
 
-              {/* Menu du site, esquissé, pour situer le bandeau */}
-              <div className="flex items-center justify-between border-b border-navy/5 px-4 py-3">
-                <span className="text-[10px] text-navy/40">☰</span>
-                <span className="font-serif text-sm tracking-[0.2em] text-navy/70">ARTI</span>
-                <span className="text-[10px] text-navy/40">Réserver</span>
-              </div>
+                {/* Menu du site, esquissé, pour situer le bandeau */}
+                <div className="flex shrink-0 items-center justify-between border-b border-navy/5 px-4 py-3">
+                  <span className="text-[11px] text-navy/40">☰</span>
+                  <span className="font-serif text-base tracking-[0.2em] text-navy/70">ARTI</span>
+                  <span className="text-[11px] text-navy/40">Réserver</span>
+                </div>
 
-              {/* Scène : la popup posée sur la page */}
-              <div
-                className={cn(
-                  'relative flex min-h-[420px] p-4',
-                  settings.layout === 'coin' ? 'items-end justify-end' : 'items-center justify-center',
-                  settings.layout === 'centre' && 'bg-navy/40'
-                )}
-              >
-                {settings.layout === 'centre' && (
-                  <div className="pointer-events-none absolute inset-0 backdrop-blur-[2px]" />
-                )}
-                <div className="relative z-10 w-full max-w-[330px]">
-                  <MarketingPopupCard
-                    settings={settings}
-                    onClose={() => {}}
-                    compact
-                    preview
-                  />
+                {/* Scène : la popup posée sur la page, à sa taille réelle */}
+                <div
+                  className={cn(
+                    'relative flex min-h-0 flex-1',
+                    settings.layout === 'coin'
+                      ? 'items-end justify-center p-3 sm:justify-end'
+                      : 'items-center justify-center p-4',
+                    settings.layout === 'centre' && 'bg-navy/40'
+                  )}
+                >
+                  <div
+                    className="relative z-10 w-full"
+                    style={{
+                      maxWidth:
+                        settings.layout === 'coin'
+                          ? Math.min(420, LARGEURS_ECRAN[appareil] - 32)
+                          : largeurCarteDansEcran(settings, LARGEURS_ECRAN[appareil]),
+                    }}
+                  >
+                    <MarketingPopupCard
+                      settings={settings}
+                      onClose={() => {}}
+                      compact={settings.layout === 'coin'}
+                      preview
+                      // 88 % de la hauteur de l'appareil simulé, comme les
+                      // 88dvh du site : sans cela, une carte « téléphone » se
+                      // mesurerait à l'écran d'ordinateur qui l'affiche.
+                      hauteurMax={`${Math.round(HAUTEURS_ECRAN[appareil] * 0.88)}px`}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            </Ecran>
 
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              L&apos;aperçu utilise le composant réel du site : ce qui est affiché ici est ce qui
-              s&apos;affichera. Sur le site, la popup apparaît après{' '}
+              Le composant réel du site, dans la largeur d&apos;un {LIBELLES_APPAREIL[appareil].toLowerCase()}.
+              Sur le site, la popup apparaît après{' '}
               <strong className="font-semibold text-foreground">{settings.delay} s</strong>.
             </p>
+            {tropLong && (
+              <p className="mt-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-foreground">
+                Votre texte fait {settings.description.length} caractères. Regardez l&apos;aperçu
+                Téléphone : au-delà de l&apos;écran, le visiteur devra faire défiler la carte.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -587,6 +666,54 @@ export default function AdminMarketingPage() {
 /* ------------------------------------------------------------------ */
 /* Petites briques d'interface                                         */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Écran simulé, réduit pour tenir dans la colonne d'aperçu.
+ *
+ * La scène est construite à la taille RÉELLE de l'appareil (1180, 768 ou
+ * 390 px de large) puis mise à l'échelle d'un seul bloc. La popup y occupe donc
+ * la place qu'elle occuperait vraiment : c'est ce qui distingue un aperçu d'une
+ * simple vignette, et ce qui permet de voir qu'un texte déborde sur téléphone.
+ */
+function Ecran({
+  largeur,
+  hauteur,
+  children,
+}: {
+  largeur: number
+  hauteur: number
+  children: React.ReactNode
+}) {
+  const boite = useRef<HTMLDivElement>(null)
+  const [echelle, setEchelle] = useState(0.4)
+
+  useEffect(() => {
+    const mesurer = () => {
+      const dispo = boite.current?.clientWidth
+      if (dispo) setEchelle(Math.min(1, dispo / largeur))
+    }
+    mesurer()
+    const observateur = new ResizeObserver(mesurer)
+    if (boite.current) observateur.observe(boite.current)
+    return () => observateur.disconnect()
+  }, [largeur])
+
+  return (
+    <div ref={boite} className="w-full">
+      <div
+        className="relative overflow-hidden rounded-2xl border border-border/60 bg-beige shadow-sm"
+        style={{ height: Math.round(hauteur * echelle) }}
+      >
+        <div
+          className="absolute top-0 left-0 origin-top-left"
+          style={{ width: largeur, height: hauteur, transform: `scale(${echelle})` }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (

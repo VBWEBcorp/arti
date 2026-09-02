@@ -7,10 +7,12 @@ import { MarketingBannerBar } from '@/components/marketing/banner-bar'
 import { MarketingPopupCard } from '@/components/marketing/popup-card'
 import {
   type MarketingSettings,
+  classesLargeurPopup,
   isBannerLive,
   isPopupLive,
   normalizeMarketing,
 } from '@/lib/marketing'
+import { cn } from '@/lib/utils'
 
 /**
  * Bandeau d'annonce + popup marketing sur le site public.
@@ -181,7 +183,7 @@ export function Marketing() {
           <div
             className={
               coin
-                ? 'pointer-events-none fixed inset-0 z-[120] flex items-end justify-end p-4 sm:p-6'
+                ? 'pointer-events-none fixed inset-0 z-[120] flex items-end justify-center p-3 sm:justify-end sm:p-6'
                 : 'fixed inset-0 z-[120] flex items-center justify-center p-4'
             }
             onClick={coin ? undefined : fermerPopup}
@@ -207,9 +209,12 @@ export function Marketing() {
               exit={coin ? { opacity: 0, y: 16 } : { opacity: 0, scale: 0.95, y: 12 }}
               transition={{ type: 'spring', damping: 26, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className={`pointer-events-auto relative z-10 max-h-[85vh] w-full overflow-y-auto outline-none ${
-                coin ? 'max-w-[380px]' : 'max-w-[440px]'
-              }`}
+              className={cn(
+                'pointer-events-auto relative z-10 w-full outline-none',
+                // La carte gère elle-même sa hauteur et son défilement : le
+                // cadre ne fait que lui donner sa largeur.
+                coin ? 'max-w-[420px]' : classesLargeurPopup(settings)
+              )}
             >
               <MarketingPopupCard settings={settings} onClose={fermerPopup} compact={coin} />
 
