@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 
 import { Footer } from '@/components/layout/footer'
 import { Navbar } from '@/components/layout/navbar'
+import { Marketing } from '@/components/marketing/marketing'
 import { ScrollToTop } from '@/components/scroll-to-top'
 
 export function RootWrapper({ children }: { children: React.ReactNode }) {
@@ -18,6 +19,10 @@ export function RootWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {/* Marketing : le bandeau d'annonce se place au-dessus de la barre de
+          navigation, la popup se superpose au reste. Sans ce montage, les
+          réglages de l'espace admin n'atteignent aucun visiteur. */}
+      <Marketing />
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />

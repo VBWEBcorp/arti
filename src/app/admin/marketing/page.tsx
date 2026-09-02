@@ -1,66 +1,60 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Check, Eye, X, Megaphone, AlignCenter } from 'lucide-react'
+import { AlignCenter, ArrowLeft, Check, ExternalLink, Megaphone } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
 
+import { ImageField } from '@/components/admin/field-editor'
+import { MarketingBannerBar } from '@/components/marketing/banner-bar'
+import { MarketingPopupCard } from '@/components/marketing/popup-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ImageField } from '@/components/admin/field-editor'
 import { adminFetch, endSession, hasValidSession, messageErreur } from '@/lib/admin-session'
+import {
+  BANNER_THEMES,
+  DEFAULT_MARKETING,
+  type MarketingSettings,
+  POPUP_THEMES,
+  type PopupFrequency,
+  type PopupLayout,
+  isBannerLive,
+  isPopupLive,
+  normalizeMarketing,
+  raisonNonAffichage,
+} from '@/lib/marketing'
 import { cn } from '@/lib/utils'
 
-interface BannerSettings {
-  enabled: boolean
-  text: string
-  link: string
-  bgColor: string
-  textColor: string
-}
-
-interface PopupSettings {
-  enabled: boolean
-  title: string
-  description: string
-  buttonText: string
-  buttonLink: string
-  imageUrl: string
-  bgColor: string
-  textColor: string
-  buttonColor: string
-  delay: number
-  banner: BannerSettings
-}
-
-const defaultSettings: PopupSettings = {
-  enabled: false,
-  title: 'Offre spéciale',
-  description: 'Profitez de nos offres exclusives dès maintenant !',
-  buttonText: 'En savoir plus',
-  buttonLink: '#',
-  imageUrl: '',
-  bgColor: '#ffffff',
-  textColor: '#111827',
-  buttonColor: '#2563eb',
-  delay: 5,
-  banner: {
-    enabled: false,
-    text: '',
-    link: '',
-    bgColor: '#111827',
-    textColor: '#ffffff',
-  },
-}
+/**
+ * Espace admin — Marketing.
+ *
+ * L'aperçu n'est plus une maquette dessinée à part : il affiche les composants
+ * que voient réellement les visiteurs (`MarketingPopupCard`, `MarketingBannerBar`),
+ * alimentés par le formulaire en cours de saisie. Ce qui est à l'écran ici est
+ * ce qui sera à l'écran sur le site.
+ */
 
 type Tab = 'popup' | 'banner'
 
+const LOGO_ARTI = '/brand/logo-arti.png'
+
+const FREQUENCES: { id: PopupFrequency; label: string; aide: string }[] = [
+  { id: 'session', label: 'Une fois par visite', aide: 'Refermée, elle revient à la prochaine visite du site.' },
+  { id: 'jour', label: 'Une fois par jour', aide: 'Refermée, elle ne revient pas avant 24 h.' },
+  { id: 'toujours', label: 'À chaque page', aide: 'Insistant : réservé aux annonces courtes et importantes.' },
+]
+
+const MISES_EN_PAGE: { id: PopupLayout; label: string; aide: string }[] = [
+  { id: 'centre', label: 'Au centre', aide: 'Impossible à manquer, le reste de la page est assombri.' },
+  { id: 'coin', label: 'En bas à droite', aide: 'Discret, le visiteur continue sa lecture.' },
+]
+
 export default function AdminMarketingPage() {
-  const [settings, setSettings] = useState<PopupSettings>(defaultSettings)
+  const [settings, setSettings] = useState<MarketingSettings>(DEFAULT_MARKETING)
+  const [enregistre, setEnregistre] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
+  const [message, setMessage] = useState<{ type: 'ok' | 'erreur'; texte: string } | null>(null)
   const [tab, setTab] = useState<Tab>('popup')
 
   useEffect(() => {
@@ -68,30 +62,36 @@ export default function AdminMarketingPage() {
   }, [])
 
   useEffect(() => {
-    const fetchData = async () => {
+    const charger = async () => {
       try {
-        const res = await fetch('/api/marketing')
+        // `no-store` : l'admin doit voir l'état réel de la base, jamais une
+        // réponse gardée en cache par le navigateur ou le CDN.
+        const res = await fetch('/api/marketing', { cache: 'no-store' })
         const data = await res.json()
-        setSettings({
-          ...defaultSettings,
-          ...data,
-          banner: { ...defaultSettings.banner, ...(data?.banner ?? {}) },
-        })
-      } catch (error) {
-        console.error('Failed to load marketing settings:', error)
+        const reglages = normalizeMarketing(data)
+        setSettings(reglages)
+        setEnregistre(JSON.stringify(reglages))
+      } catch {
+        setMessage({ type: 'erreur', texte: 'Impossible de charger les réglages actuels.' })
       } finally {
         setLoading(false)
       }
     }
-    fetchData()
+    charger()
   }, [])
 
-  const updateBanner = (patch: Partial<BannerSettings>) => {
-    setSettings((s) => ({ ...s, banner: { ...s.banner, ...patch } }))
-  }
+  const modifie = useMemo(
+    () => enregistre !== '' && JSON.stringify(settings) !== enregistre,
+    [settings, enregistre]
+  )
 
-  const handleSave = async () => {
+  const patch = (p: Partial<MarketingSettings>) => setSettings((s) => ({ ...s, ...p }))
+  const patchBanner = (p: Partial<MarketingSettings['banner']>) =>
+    setSettings((s) => ({ ...s, banner: { ...s.banner, ...p } }))
+
+  const enregistrer = async () => {
     setSaving(true)
+    setMessage(null)
     try {
       const res = await adminFetch('/api/marketing', {
         method: 'PUT',
@@ -102,462 +102,618 @@ export default function AdminMarketingPage() {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || 'Enregistrement impossible.')
       }
-      alert('Paramètres sauvegardés')
+      const sauve = normalizeMarketing(await res.json())
+      setSettings(sauve)
+      setEnregistre(JSON.stringify(sauve))
+      setMessage({ type: 'ok', texte: 'Enregistré. Le site est à jour dans la minute.' })
     } catch (error) {
-      const msg = messageErreur(error)
-      if (msg) alert('Erreur : ' + msg)
+      const texte = messageErreur(error)
+      if (texte) setMessage({ type: 'erreur', texte })
     } finally {
       setSaving(false)
     }
   }
 
   if (loading) {
-    return <div className="p-6">Chargement...</div>
+    return <div className="p-6 text-sm text-muted-foreground">Chargement…</div>
   }
+
+  const empeche = raisonNonAffichage(settings)
+  const popupEnLigne = isPopupLive(settings)
+  const banniereEnLigne = isBannerLive(settings)
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between pt-8 md:pt-0">
+      {/* ---------------------------------------------------------- */}
+      {/* En-tête                                                     */}
+      {/* ---------------------------------------------------------- */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-8 md:pt-0">
         <div className="flex items-center gap-3">
           <Link
             href="/admin/dashboard"
-            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
           >
             <ArrowLeft className="size-4" />
           </Link>
           <div>
             <h1 className="text-lg font-bold text-foreground">Marketing</h1>
             <p className="text-xs text-muted-foreground">
-              {tab === 'popup'
-                ? 'Popup promotionnelle affichée aux visiteurs'
-                : 'Bannière affichée au-dessus du header'}
+              Popup et bandeau d&apos;annonce affichés aux visiteurs du site
             </p>
           </div>
         </div>
-        {tab === 'popup' && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setShowPreview(true)}
+
+        <div className="flex items-center gap-2">
+          <a
+            href="/?apercu-popup=1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+            title="Ouvre le site et force l'affichage de la popup enregistrée"
           >
-            <Eye className="size-4" />
-            Aperçu
+            <ExternalLink className="size-4" />
+            Tester sur le site
+          </a>
+          <Button onClick={enregistrer} disabled={saving} className="gap-2">
+            <Check className="size-4" />
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
+        </div>
+      </div>
+
+      {/* Bandeau d'état : dit à voix haute pourquoi la popup se voit ou non */}
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-4 py-3 text-sm',
+          popupEnLigne
+            ? 'border-primary/30 bg-primary/5 text-foreground'
+            : 'border-border/60 bg-muted/40 text-muted-foreground'
+        )}
+      >
+        <span
+          className={cn(
+            'inline-flex items-center gap-2 font-semibold',
+            popupEnLigne ? 'text-primary' : ''
+          )}
+        >
+          <span
+            className={cn(
+              'size-2 rounded-full',
+              popupEnLigne ? 'bg-primary' : 'bg-muted-foreground/40'
+            )}
+          />
+          {popupEnLigne ? 'Popup en ligne' : 'Popup hors ligne'}
+        </span>
+        <span>{empeche ?? `Elle apparaît après ${settings.delay} s sur le site.`}</span>
+        {modifie && (
+          <span className="ml-auto text-xs font-medium text-accent">
+            Modifications non enregistrées : « Tester sur le site » montre la version enregistrée.
+          </span>
         )}
       </div>
 
-      {/* Tabs */}
+      {message && (
+        <div
+          className={cn(
+            'rounded-xl border px-4 py-3 text-sm',
+            message.type === 'ok'
+              ? 'border-primary/30 bg-primary/5 text-foreground'
+              : 'border-destructive/30 bg-destructive/5 text-destructive'
+          )}
+        >
+          {message.texte}
+        </div>
+      )}
+
+      {/* Onglets */}
       <div className="inline-flex items-center gap-1 rounded-lg bg-muted/60 p-1">
         <button
           onClick={() => setTab('popup')}
           className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-            tab === 'popup'
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
+            'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+            tab === 'popup' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
           )}
         >
           <Megaphone className="size-4" />
-          Popup Marketing
+          Popup
+          {popupEnLigne && <span className="size-1.5 rounded-full bg-primary" />}
         </button>
         <button
           onClick={() => setTab('banner')}
           className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-            tab === 'banner'
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
+            'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+            tab === 'banner' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
           )}
         >
           <AlignCenter className="size-4" />
-          Bannière
+          Bandeau
+          {banniereEnLigne && <span className="size-1.5 rounded-full bg-primary" />}
         </button>
       </div>
 
-      {tab === 'popup' && (
-      <div className="rounded-xl bg-card border border-border/40 overflow-hidden max-w-2xl">
-        {/* Enable toggle */}
-        <div className="px-5 py-3 border-b border-border/40 bg-muted/30 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-            Popup Marketing
-          </h3>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <div
-              className={`relative w-9 h-5 rounded-full transition-colors ${settings.enabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-              onClick={() => setSettings({ ...settings, enabled: !settings.enabled })}
-            >
-              <div className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${settings.enabled ? 'translate-x-4' : ''}`} />
-            </div>
-            <span className="text-xs text-muted-foreground">{settings.enabled ? 'Activée' : 'Désactivée'}</span>
-          </label>
-        </div>
-
-        <div className="p-5 space-y-5">
-          {/* Content section */}
-          <div className="space-y-4">
-            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Contenu</p>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Titre
-              </Label>
-              <Input
-                value={settings.title}
-                onChange={(e) => setSettings({ ...settings, title: e.target.value })}
-                placeholder="Offre spéciale"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Description
-              </Label>
-              <textarea
-                value={settings.description}
-                onChange={(e) => setSettings({ ...settings, description: e.target.value })}
-                placeholder="Profitez de nos offres exclusives..."
-                rows={3}
-                className="w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-y"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Texte du bouton
-                </Label>
-                <Input
-                  value={settings.buttonText}
-                  onChange={(e) => setSettings({ ...settings, buttonText: e.target.value })}
-                  placeholder="En savoir plus"
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+        {/* ---------------------------------------------------------- */}
+        {/* Colonne formulaire                                          */}
+        {/* ---------------------------------------------------------- */}
+        <div className="order-2 space-y-6 lg:order-1">
+          {tab === 'popup' ? (
+            <>
+              <Bloc titre="Affichage">
+                <Interrupteur
+                  actif={settings.enabled}
+                  onChange={(v) => patch({ enabled: v })}
+                  libelle={settings.enabled ? 'Popup activée' : 'Popup désactivée'}
+                  aide="Rien ne s'affiche sur le site tant que cet interrupteur est éteint."
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Lien du bouton
-                </Label>
-                <Input
-                  value={settings.buttonLink}
-                  onChange={(e) => setSettings({ ...settings, buttonLink: e.target.value })}
-                  placeholder="https://..."
+              </Bloc>
+
+              <Bloc titre="Contenu">
+                <Champ label="Titre">
+                  <Input
+                    value={settings.title}
+                    onChange={(e) => patch({ title: e.target.value })}
+                    placeholder="Atelier du dimanche"
+                  />
+                </Champ>
+
+                <Champ label="Texte" aide="Les retours à la ligne sont conservés à l'écran.">
+                  <textarea
+                    value={settings.description}
+                    onChange={(e) => patch({ description: e.target.value })}
+                    rows={6}
+                    placeholder="Décrivez votre offre ou votre événement…"
+                    className="w-full min-w-0 resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  />
+                </Champ>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Champ label="Texte du bouton" aide="Laissez vide pour une annonce sans bouton.">
+                    <Input
+                      value={settings.buttonText}
+                      onChange={(e) => patch({ buttonText: e.target.value })}
+                      placeholder="Réserver ma place"
+                    />
+                  </Champ>
+                  <Champ label="Lien du bouton" aide="Une page du site (/infos-pratiques) ou une adresse complète.">
+                    <Input
+                      value={settings.buttonLink}
+                      onChange={(e) => patch({ buttonLink: e.target.value })}
+                      placeholder="/infos-pratiques"
+                    />
+                  </Champ>
+                </div>
+
+                <ImageField
+                  label="Image (optionnelle)"
+                  value={settings.imageUrl}
+                  onChange={(v) => patch({ imageUrl: v })}
                 />
-              </div>
-            </div>
 
-            <ImageField
-              label="Image (optionnelle)"
-              value={settings.imageUrl}
-              onChange={(v) => setSettings({ ...settings, imageUrl: v })}
-            />
-          </div>
+                <div className="space-y-2">
+                  <ImageField
+                    label="Logo (optionnel)"
+                    value={settings.logoUrl}
+                    onChange={(v) => patch({ logoUrl: v })}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => patch({ logoUrl: LOGO_ARTI })}
+                      className="rounded-md border border-border/60 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+                    >
+                      Utiliser le logo ARTI
+                    </button>
+                    {settings.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => patch({ logoUrl: '' })}
+                        className="rounded-md border border-border/60 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+                      >
+                        Retirer le logo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </Bloc>
 
-          {/* Design section */}
-          <div className="space-y-4 pt-2 border-t border-border/40">
-            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Design</p>
+              <Bloc titre="Apparence">
+                <Champ label="Thème" aide="Accords de couleurs tirés de la charte du site.">
+                  <div className="flex flex-wrap gap-2">
+                    {POPUP_THEMES.map((t) => {
+                      const actif =
+                        settings.bgColor.toLowerCase() === t.bgColor.toLowerCase() &&
+                        settings.textColor.toLowerCase() === t.textColor.toLowerCase() &&
+                        settings.buttonColor.toLowerCase() === t.buttonColor.toLowerCase()
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() =>
+                            patch({ bgColor: t.bgColor, textColor: t.textColor, buttonColor: t.buttonColor })
+                          }
+                          className={cn(
+                            'flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                            actif
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border/60 text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          <span
+                            className="size-4 rounded-full border border-black/10"
+                            style={{ backgroundColor: t.bgColor }}
+                          />
+                          <span
+                            className="-ml-3.5 size-4 rounded-full border border-black/10"
+                            style={{ backgroundColor: t.buttonColor }}
+                          />
+                          {t.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Champ>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Fond
-                </Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
+                <div className="grid grid-cols-3 gap-4">
+                  <Couleur
+                    label="Fond"
                     value={settings.bgColor}
-                    onChange={(e) => setSettings({ ...settings, bgColor: e.target.value })}
-                    className="size-9 rounded-lg border border-input cursor-pointer bg-transparent"
+                    onChange={(v) => patch({ bgColor: v })}
                   />
-                  <Input
-                    value={settings.bgColor}
-                    onChange={(e) => setSettings({ ...settings, bgColor: e.target.value })}
-                    className="font-mono text-xs"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Texte
-                </Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
+                  <Couleur
+                    label="Texte"
                     value={settings.textColor}
-                    onChange={(e) => setSettings({ ...settings, textColor: e.target.value })}
-                    className="size-9 rounded-lg border border-input cursor-pointer bg-transparent"
+                    onChange={(v) => patch({ textColor: v })}
                   />
-                  <Input
-                    value={settings.textColor}
-                    onChange={(e) => setSettings({ ...settings, textColor: e.target.value })}
-                    className="font-mono text-xs"
+                  <Couleur
+                    label="Bouton"
+                    value={settings.buttonColor}
+                    onChange={(v) => patch({ buttonColor: v })}
                   />
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Bouton
-                </Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={settings.buttonColor}
-                    onChange={(e) => setSettings({ ...settings, buttonColor: e.target.value })}
-                    className="size-9 rounded-lg border border-input cursor-pointer bg-transparent"
-                  />
-                  <Input
-                    value={settings.buttonColor}
-                    onChange={(e) => setSettings({ ...settings, buttonColor: e.target.value })}
-                    className="font-mono text-xs"
-                  />
-                </div>
-              </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Délai d&apos;apparition (secondes)
-              </Label>
-              <Input
-                type="number"
-                min={1}
-                max={60}
-                value={settings.delay}
-                onChange={(e) => setSettings({ ...settings, delay: parseInt(e.target.value) || 5 })}
-              />
-              <p className="text-[11px] text-muted-foreground/60">
-                La popup s&apos;affiche après ce délai quand un visiteur ouvre le site.
+                <Champ label="Mise en page">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {MISES_EN_PAGE.map((m) => (
+                      <Choix
+                        key={m.id}
+                        actif={settings.layout === m.id}
+                        onClick={() => patch({ layout: m.id })}
+                        titre={m.label}
+                        aide={m.aide}
+                      />
+                    ))}
+                  </div>
+                </Champ>
+              </Bloc>
+
+              <Bloc titre="Diffusion">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Champ label="Délai avant apparition" aide="En secondes, après l'ouverture d'une page.">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={settings.delay}
+                      onChange={(e) => patch({ delay: Number(e.target.value) })}
+                    />
+                  </Champ>
+                </div>
+
+                <Champ label="Fréquence">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {FREQUENCES.map((f) => (
+                      <Choix
+                        key={f.id}
+                        actif={settings.frequency === f.id}
+                        onClick={() => patch({ frequency: f.id })}
+                        titre={f.label}
+                        aide={f.aide}
+                      />
+                    ))}
+                  </div>
+                </Champ>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Champ label="Début (optionnel)" aide="Avant cette date, rien ne s'affiche.">
+                    <Input
+                      type="date"
+                      value={settings.startDate}
+                      onChange={(e) => patch({ startDate: e.target.value })}
+                    />
+                  </Champ>
+                  <Champ label="Fin (optionnel)" aide="Dernier jour d'affichage, inclus.">
+                    <Input
+                      type="date"
+                      value={settings.endDate}
+                      onChange={(e) => patch({ endDate: e.target.value })}
+                    />
+                  </Champ>
+                </div>
+                {(settings.startDate || settings.endDate) && (
+                  <button
+                    type="button"
+                    onClick={() => patch({ startDate: '', endDate: '' })}
+                    className="text-xs font-medium text-muted-foreground underline-offset-2 hover:underline"
+                  >
+                    Retirer les dates (diffusion permanente)
+                  </button>
+                )}
+              </Bloc>
+            </>
+          ) : (
+            <>
+              <Bloc titre="Affichage">
+                <Interrupteur
+                  actif={settings.banner.enabled}
+                  onChange={(v) => patchBanner({ enabled: v })}
+                  libelle={settings.banner.enabled ? 'Bandeau activé' : 'Bandeau désactivé'}
+                  aide="Le bandeau se place tout en haut, au-dessus du menu."
+                />
+              </Bloc>
+
+              <Bloc titre="Contenu">
+                <Champ label="Texte">
+                  <Input
+                    value={settings.banner.text}
+                    onChange={(e) => patchBanner({ text: e.target.value })}
+                    placeholder="Atelier linogravure le 20 septembre, réservez votre place"
+                  />
+                </Champ>
+                <Champ label="Lien (optionnel)" aide="Laissez vide pour un bandeau non cliquable.">
+                  <Input
+                    value={settings.banner.link}
+                    onChange={(e) => patchBanner({ link: e.target.value })}
+                    placeholder="/infos-pratiques"
+                  />
+                </Champ>
+              </Bloc>
+
+              <Bloc titre="Apparence">
+                <Champ label="Thème">
+                  <div className="flex flex-wrap gap-2">
+                    {BANNER_THEMES.map((t) => {
+                      const actif =
+                        settings.banner.bgColor.toLowerCase() === t.bgColor.toLowerCase() &&
+                        settings.banner.textColor.toLowerCase() === t.textColor.toLowerCase()
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => patchBanner({ bgColor: t.bgColor, textColor: t.textColor })}
+                          className={cn(
+                            'flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                            actif
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border/60 text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          <span
+                            className="size-4 rounded-full border border-black/10"
+                            style={{ backgroundColor: t.bgColor }}
+                          />
+                          {t.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Champ>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Couleur
+                    label="Fond"
+                    value={settings.banner.bgColor}
+                    onChange={(v) => patchBanner({ bgColor: v })}
+                  />
+                  <Couleur
+                    label="Texte"
+                    value={settings.banner.textColor}
+                    onChange={(v) => patchBanner({ textColor: v })}
+                  />
+                </div>
+              </Bloc>
+
+              <p className="text-xs text-muted-foreground">
+                Les dates de diffusion réglées dans l&apos;onglet « Popup » s&apos;appliquent aussi au
+                bandeau.
               </p>
-            </div>
-          </div>
+            </>
+          )}
 
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full gap-2"
-          >
+          <Button onClick={enregistrer} disabled={saving} className="w-full gap-2">
             <Check className="size-4" />
-            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </div>
-      </div>
-      )}
 
-      {tab === 'banner' && (
-      <div className="rounded-xl bg-card border border-border/40 overflow-hidden max-w-2xl">
-        <div className="px-5 py-3 border-b border-border/40 bg-muted/30 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-            Bannière au-dessus du header
-          </h3>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <div
-              className={`relative w-9 h-5 rounded-full transition-colors ${settings.banner.enabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
-              onClick={() => updateBanner({ enabled: !settings.banner.enabled })}
-            >
-              <div className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${settings.banner.enabled ? 'translate-x-4' : ''}`} />
-            </div>
-            <span className="text-xs text-muted-foreground">{settings.banner.enabled ? 'Activée' : 'Désactivée'}</span>
-          </label>
-        </div>
-
-        <div className="p-5 space-y-5">
-          {/* Live preview */}
-          <div className="rounded-lg border border-border/40 overflow-hidden">
-            <div className="px-3 py-1.5 bg-muted/40 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border/40">
-              Aperçu
-            </div>
-            <div
-              className="px-4 py-2 text-center text-sm font-medium"
-              style={{ backgroundColor: settings.banner.bgColor, color: settings.banner.textColor }}
-            >
-              {settings.banner.text || 'Votre texte de bannière…'}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Contenu</p>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Texte
-              </Label>
-              <Input
-                value={settings.banner.text}
-                onChange={(e) => updateBanner({ text: e.target.value })}
-                placeholder="Livraison gratuite jusqu'au 30 avril !"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Lien (optionnel)
-              </Label>
-              <Input
-                value={settings.banner.link}
-                onChange={(e) => updateBanner({ link: e.target.value })}
-                placeholder="/contact ou https://..."
-              />
-              <p className="text-[11px] text-muted-foreground/60">
-                Laissez vide pour que la bannière ne soit pas cliquable.
+        {/* ---------------------------------------------------------- */}
+        {/* Colonne aperçu                                              */}
+        {/* ---------------------------------------------------------- */}
+        <div className="order-1 lg:order-2">
+          <div className="lg:sticky lg:top-6">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                Aperçu en direct
               </p>
+              <p className="text-[10px] text-muted-foreground/60">Ce que voit le visiteur</p>
             </div>
-          </div>
 
-          <div className="space-y-4 pt-2 border-t border-border/40">
-            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Design</p>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Fond
-                </Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={settings.banner.bgColor}
-                    onChange={(e) => updateBanner({ bgColor: e.target.value })}
-                    className="size-9 rounded-lg border border-input cursor-pointer bg-transparent"
-                  />
-                  <Input
-                    value={settings.banner.bgColor}
-                    onChange={(e) => updateBanner({ bgColor: e.target.value })}
-                    className="font-mono text-xs"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Texte
-                </Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={settings.banner.textColor}
-                    onChange={(e) => updateBanner({ textColor: e.target.value })}
-                    className="size-9 rounded-lg border border-input cursor-pointer bg-transparent"
-                  />
-                  <Input
-                    value={settings.banner.textColor}
-                    onChange={(e) => updateBanner({ textColor: e.target.value })}
-                    className="font-mono text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full gap-2"
-          >
-            <Check className="size-4" />
-            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-          </Button>
-        </div>
-      </div>
-      )}
-
-      {/* Preview modal (popup only) */}
-      {showPreview && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md" onClick={() => setShowPreview(false)}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative mx-4 w-full max-w-[420px] overflow-hidden rounded-3xl shadow-[0_25px_60px_-12px_rgba(0,0,0,0.4)]"
-            style={{ backgroundColor: settings.bgColor, color: settings.textColor }}
-          >
-            <div
-              className="pointer-events-none absolute -top-20 -right-20 size-40 rounded-full opacity-20 blur-3xl"
-              style={{ backgroundColor: settings.buttonColor }}
-            />
-            <div
-              className="pointer-events-none absolute -bottom-16 -left-16 size-32 rounded-full opacity-15 blur-3xl"
-              style={{ backgroundColor: settings.buttonColor }}
-            />
-
-            <motion.button
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 400 }}
-              onClick={() => setShowPreview(false)}
-              className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-black/5 backdrop-blur-sm border border-black/5 hover:bg-black/10 transition-all duration-200 hover:scale-110 cursor-pointer"
-              style={{ color: settings.textColor }}
-            >
-              <X className="size-4" strokeWidth={2.5} />
-            </motion.button>
-
-            {settings.imageUrl && (
-              <div className="relative w-full h-52 overflow-hidden">
-                <img
-                  src={settings.imageUrl}
-                  alt={settings.title}
-                  className="w-full h-full object-cover"
-                />
-                <div
-                  className="absolute inset-x-0 bottom-0 h-20"
-                  style={{
-                    background: `linear-gradient(to top, ${settings.bgColor}, transparent)`,
-                  }}
-                />
-              </div>
-            )}
-
-            <div className={`relative px-7 ${settings.imageUrl ? 'pt-1 pb-7' : 'py-8'}`}>
-              {!settings.imageUrl && (
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: 48 }}
-                  transition={{ delay: 0.2, duration: 0.4 }}
-                  className="h-1 rounded-full mb-5"
-                  style={{ backgroundColor: settings.buttonColor }}
-                />
+            <div className="overflow-hidden rounded-2xl border border-border/60 bg-beige shadow-sm">
+              {/* Bandeau, à sa vraie place : au-dessus du menu */}
+              {settings.banner.enabled && (
+                <MarketingBannerBar settings={settings} preview />
               )}
 
-              <motion.h2
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="text-2xl font-extrabold tracking-tight leading-tight pr-10"
-              >
-                {settings.title || 'Titre'}
-              </motion.h2>
+              {/* Menu du site, esquissé, pour situer le bandeau */}
+              <div className="flex items-center justify-between border-b border-navy/5 px-4 py-3">
+                <span className="text-[10px] text-navy/40">☰</span>
+                <span className="font-serif text-sm tracking-[0.2em] text-navy/70">ARTI</span>
+                <span className="text-[10px] text-navy/40">Réserver</span>
+              </div>
 
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-                className="mt-3 text-sm leading-relaxed opacity-70"
+              {/* Scène : la popup posée sur la page */}
+              <div
+                className={cn(
+                  'relative flex min-h-[420px] p-4',
+                  settings.layout === 'coin' ? 'items-end justify-end' : 'items-center justify-center',
+                  settings.layout === 'centre' && 'bg-navy/40'
+                )}
               >
-                {settings.description || 'Description...'}
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-                className="mt-6"
-              >
-                <a
-                  href={settings.buttonLink || '#'}
-                  onClick={(e) => e.preventDefault()}
-                  className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                  style={{
-                    backgroundColor: settings.buttonColor,
-                    boxShadow: `0 4px 14px -3px ${settings.buttonColor}80`,
-                  }}
-                >
-                  {settings.buttonText || 'En savoir plus'}
-                  <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </a>
-              </motion.div>
+                {settings.layout === 'centre' && (
+                  <div className="pointer-events-none absolute inset-0 backdrop-blur-[2px]" />
+                )}
+                <div className="relative z-10 w-full max-w-[330px]">
+                  <MarketingPopupCard
+                    settings={settings}
+                    onClose={() => {}}
+                    compact
+                    preview
+                  />
+                </div>
+              </div>
             </div>
-          </motion.div>
+
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              L&apos;aperçu utilise le composant réel du site : ce qui est affiché ici est ce qui
+              s&apos;affichera. Sur le site, la popup apparaît après{' '}
+              <strong className="font-semibold text-foreground">{settings.delay} s</strong>.
+            </p>
+          </div>
         </div>
-      )}
+      </div>
     </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Petites briques d'interface                                         */
+/* ------------------------------------------------------------------ */
+
+function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/40 bg-card">
+      <div className="border-b border-border/40 bg-muted/30 px-5 py-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+          {titre}
+        </h3>
+      </div>
+      <div className="space-y-5 p-5">{children}</div>
+    </div>
+  )
+}
+
+function Champ({
+  label,
+  aide,
+  children,
+}: {
+  label: string
+  aide?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+      {aide && <p className="text-[11px] text-muted-foreground/60">{aide}</p>}
+    </div>
+  )
+}
+
+function Interrupteur({
+  actif,
+  onChange,
+  libelle,
+  aide,
+}: {
+  actif: boolean
+  onChange: (v: boolean) => void
+  libelle: string
+  aide: string
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-sm font-medium text-foreground">{libelle}</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground/70">{aide}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={actif}
+        aria-label={libelle}
+        onClick={() => onChange(!actif)}
+        className={cn(
+          'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+          actif ? 'bg-primary' : 'bg-muted-foreground/30'
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform',
+            actif && 'translate-x-5'
+          )}
+        />
+      </button>
+    </div>
+  )
+}
+
+function Couleur({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </Label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={label}
+          className="size-9 shrink-0 cursor-pointer rounded-lg border border-input bg-transparent"
+        />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="font-mono text-xs"
+        />
+      </div>
+    </div>
+  )
+}
+
+function Choix({
+  actif,
+  onClick,
+  titre,
+  aide,
+}: {
+  actif: boolean
+  onClick: () => void
+  titre: string
+  aide: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-lg border p-3 text-left transition-colors',
+        actif ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-border'
+      )}
+    >
+      <span className="block text-sm font-medium text-foreground">{titre}</span>
+      <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground/70">{aide}</span>
+    </button>
   )
 }

@@ -1,5 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose'
 
+import { DEFAULT_MARKETING, type PopupFrequency, type PopupLayout } from '@/lib/marketing'
+
+/**
+ * Réglages du popup marketing et du bandeau d'annonce (un seul document).
+ *
+ * La forme des données et les valeurs par défaut viennent de `src/lib/marketing.ts`,
+ * partagé avec le site public et l'espace admin : impossible d'ajouter un champ
+ * ici sans que l'aperçu de l'admin le connaisse.
+ */
 export interface IMarketingPopup extends Document {
   enabled: boolean
   title: string
@@ -7,10 +16,17 @@ export interface IMarketingPopup extends Document {
   buttonText: string
   buttonLink: string
   imageUrl?: string
+  logoUrl?: string
   bgColor: string
   textColor: string
   buttonColor: string
-  delay: number // in seconds
+  /** Secondes avant l'apparition de la popup. */
+  delay: number
+  layout: PopupLayout
+  frequency: PopupFrequency
+  /** '' ou 'AAAA-MM-JJ' — fenêtre de diffusion, bornes incluses. */
+  startDate: string
+  endDate: string
   banner?: {
     enabled: boolean
     text: string
@@ -21,51 +37,31 @@ export interface IMarketingPopup extends Document {
   updatedAt: Date
 }
 
+const d = DEFAULT_MARKETING
+
 const MarketingPopupSchema = new Schema<IMarketingPopup>(
   {
-    enabled: {
-      type: Boolean,
-      default: false,
-    },
-    title: {
-      type: String,
-      default: 'Offre spéciale',
-    },
-    description: {
-      type: String,
-      default: 'Profitez de nos offres exclusives dès maintenant !',
-    },
-    buttonText: {
-      type: String,
-      default: 'En savoir plus',
-    },
-    buttonLink: {
-      type: String,
-      default: '#',
-    },
-    imageUrl: String,
-    bgColor: {
-      type: String,
-      default: '#ffffff',
-    },
-    textColor: {
-      type: String,
-      default: '#111827',
-    },
-    buttonColor: {
-      type: String,
-      default: '#2563eb',
-    },
-    delay: {
-      type: Number,
-      default: 5,
-    },
+    enabled: { type: Boolean, default: d.enabled },
+    title: { type: String, default: d.title },
+    description: { type: String, default: d.description },
+    buttonText: { type: String, default: d.buttonText },
+    buttonLink: { type: String, default: d.buttonLink },
+    imageUrl: { type: String, default: '' },
+    logoUrl: { type: String, default: '' },
+    bgColor: { type: String, default: d.bgColor },
+    textColor: { type: String, default: d.textColor },
+    buttonColor: { type: String, default: d.buttonColor },
+    delay: { type: Number, default: d.delay },
+    layout: { type: String, enum: ['centre', 'coin'], default: d.layout },
+    frequency: { type: String, enum: ['session', 'jour', 'toujours'], default: d.frequency },
+    startDate: { type: String, default: '' },
+    endDate: { type: String, default: '' },
     banner: {
-      enabled: { type: Boolean, default: false },
-      text: { type: String, default: '' },
-      link: { type: String, default: '' },
-      bgColor: { type: String, default: '#111827' },
-      textColor: { type: String, default: '#ffffff' },
+      enabled: { type: Boolean, default: d.banner.enabled },
+      text: { type: String, default: d.banner.text },
+      link: { type: String, default: d.banner.link },
+      bgColor: { type: String, default: d.banner.bgColor },
+      textColor: { type: String, default: d.banner.textColor },
     },
   },
   {
