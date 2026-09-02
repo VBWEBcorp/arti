@@ -567,7 +567,9 @@ export default function AdminMarketingPage() {
         {/* Colonne aperçu                                              */}
         {/* ---------------------------------------------------------- */}
         <div className="order-1 lg:order-2">
-          <div className="lg:sticky lg:top-6">
+          {/* Filet de sécurité : sur une fenêtre courte, la colonne collante
+              défile d'elle-même au lieu de garder son bas hors d'atteinte. */}
+          <div className="lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:pr-1">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 Aperçu en direct
@@ -600,33 +602,43 @@ export default function AdminMarketingPage() {
             </div>
 
             <Ecran largeur={LARGEURS_ECRAN[appareil]} hauteur={HAUTEURS_ECRAN[appareil]}>
-              <div className="flex h-full flex-col bg-beige">
-                {/* Bandeau, à sa vraie place : au-dessus du menu */}
-                {settings.banner.enabled && <MarketingBannerBar settings={settings} preview />}
+              <div className="relative h-full bg-beige">
+                {/* La page du site, en fond */}
+                <div className="flex h-full flex-col">
+                  {/* Bandeau, à sa vraie place : au-dessus du menu */}
+                  {settings.banner.enabled && <MarketingBannerBar settings={settings} preview />}
 
-                {/* Menu du site, esquissé, pour situer le bandeau */}
-                <div className="flex shrink-0 items-center justify-between border-b border-navy/5 px-4 py-3">
-                  <span className="text-[11px] text-navy/40">☰</span>
-                  <span className="font-serif text-base tracking-[0.2em] text-navy/70">ARTI</span>
-                  <span className="text-[11px] text-navy/40">Réserver</span>
+                  <div className="flex shrink-0 items-center justify-between border-b border-navy/5 px-5 py-4">
+                    <span className="text-[13px] text-navy/40">☰</span>
+                    <span className="font-serif text-lg tracking-[0.2em] text-navy/70">ARTI</span>
+                    <span className="text-[13px] text-navy/40">Réserver</span>
+                  </div>
+
+                  {/* Esquisse de page : donne du corps au fond, sans distraire */}
+                  <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 opacity-40">
+                    <div className="h-3 w-2/3 rounded-full bg-navy/15" />
+                    <div className="h-3 w-1/2 rounded-full bg-navy/10" />
+                    <div className="mt-2 h-24 w-full rounded-2xl bg-navy/5" />
+                  </div>
                 </div>
 
-                {/* Scène : la popup posée sur la page, à sa taille réelle */}
+                {/* La popup, par-dessus TOUTE la page, exactement comme sur le
+                    site où elle est en position fixe. Posée seulement dans la
+                    zone sous le menu, une carte haute se retrouvait rognée. */}
                 <div
                   className={cn(
-                    'relative flex min-h-0 flex-1',
+                    'absolute inset-0 flex',
                     settings.layout === 'coin'
-                      ? 'items-end justify-center p-3 sm:justify-end'
-                      : 'items-center justify-center p-4',
-                    settings.layout === 'centre' && 'bg-navy/40'
+                      ? 'items-end justify-end p-3'
+                      : 'items-center justify-center bg-navy/50 p-4'
                   )}
                 >
                   <div
-                    className="relative z-10 w-full"
+                    className="w-full"
                     style={{
                       maxWidth:
                         settings.layout === 'coin'
-                          ? Math.min(420, LARGEURS_ECRAN[appareil] - 32)
+                          ? Math.min(420, LARGEURS_ECRAN[appareil] - 24)
                           : largeurCarteDansEcran(settings, LARGEURS_ECRAN[appareil]),
                     }}
                   >
@@ -690,13 +702,23 @@ function Ecran({
   useEffect(() => {
     const mesurer = () => {
       const dispo = boite.current?.clientWidth
-      if (dispo) setEchelle(Math.min(1, dispo / largeur))
+      if (!dispo) return
+      // Le cadre doit tenir EN ENTIER dans la fenêtre. La colonne d'aperçu est
+      // collante : un cadre plus haut que l'écran garde son bas hors de vue, et
+      // faire défiler la page ne le révèle jamais. C'est ce qui rendait
+      // l'aperçu téléphone (780 px de haut) inutilisable sur un portable.
+      const hauteurDispo = Math.max(300, window.innerHeight - 280)
+      setEchelle(Math.min(1, dispo / largeur, hauteurDispo / hauteur))
     }
     mesurer()
     const observateur = new ResizeObserver(mesurer)
     if (boite.current) observateur.observe(boite.current)
-    return () => observateur.disconnect()
-  }, [largeur])
+    window.addEventListener('resize', mesurer)
+    return () => {
+      observateur.disconnect()
+      window.removeEventListener('resize', mesurer)
+    }
+  }, [largeur, hauteur])
 
   return (
     <div ref={boite} className="w-full">

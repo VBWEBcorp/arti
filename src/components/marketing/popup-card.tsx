@@ -244,6 +244,16 @@ export function MarketingPopupCard({
               {libelleBouton}
             </a>
           )}
+
+          {/* Fondu collant en bas de la zone qui défile : quand le message est
+              long (le premier fait 500 caractères), il indique qu'il y a une
+              suite. Sur un texte court il se pose sur le vide et ne se voit
+              pas. */}
+          <span
+            aria-hidden
+            className="pointer-events-none sticky bottom-0 block h-7 w-full shrink-0"
+            style={{ background: `linear-gradient(to top, ${bgColor}, transparent)` }}
+          />
         </div>
       </div>
     </div>
